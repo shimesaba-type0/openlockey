@@ -151,6 +151,13 @@ async def login(
         secure=not settings.DEBUG,  # 本番環境ではセキュアクッキーを使用
         samesite="lax"
     )
+
+    # セッションにユーザー情報を保存
+    request.session["user"] = {
+        "id": user.id,
+        "username": user.username,
+        "is_admin": user.is_admin
+    }
     
     return {
         "status": "success",
@@ -187,6 +194,10 @@ async def logout(
         secure=not settings.DEBUG,
         samesite="lax"
     )
+
+    # セッションからユーザー情報を削除
+    if "user" in request.session:
+        del request.session["user"]
     
     return {"status": "success", "message": "ログアウトしました。"}
 
