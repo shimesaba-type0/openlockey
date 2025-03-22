@@ -3,6 +3,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, RedirectResponse
+from starlette.middleware.sessions import SessionMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
 import os
 from datetime import datetime
@@ -25,6 +26,16 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+)
+
+# セッションミドルウェアの設定
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=settings.SECRET_KEY,
+    session_cookie=settings.SESSION_COOKIE_NAME,
+    max_age=settings.SESSION_EXPIRE_HOURS * 3600,  # 秒単位
+    same_site="lax",
+    https_only=not settings.DEBUG  # 本番環境ではHTTPSのみ
 )
 
 # 静的ファイルのマウント
@@ -291,8 +302,19 @@ async def admin_users_page(request: Request):
 
 # ログアウト処理
 @app.get("/logout")
-async def logout():
-    # TODO: セッション削除処理
+async def logout(request: Request, response: Response):
+    # セッションからユーザー情報を削除
+    if "user" in request.session:
+        del request.session["user"]
+
+    # セッションクッキーを削除
+    response.delete_cookie(
+        key=settings.SESSION_COOKIE_NAME,
+        httponly=True,
+        secure=not settings.DEBUG,
+        samesite="lax"
+    )
+
     return RedirectResponse(url="/", status_code=303)
 
 # アプリケーションの実行
