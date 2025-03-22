@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+
+{% block title %}ログイン - OpenLockey{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="card shadow-sm mt-5">
+                <div class="card-body p-4">
+                    <div class="text-center mb-4">
+                        <h2 class="mb-3">OpenLockey</h2>
+                        <p class="text-muted">安全なパスフレーズベースの認証システム</p>
+                    </div>
+                    
+                    <form method="post" action="/api/login" id="loginForm">
+                        <div class="mb-3">
+                            <label for="username" class="form-label">ユーザー名</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-person"></i></span>
+                                <input 
+                                    type="text" 
+                                    class="form-control" 
+                                    id="username" 
+                                    name="username" 
+                                    required 
+                                    autofocus
+                                >
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="password" class="form-label">パスフレーズ</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                                <input 
+                                    type="password" 
+                                    class="form-control" 
+                                    id="password" 
+                                    name="password" 
+                                    required
+                                >
+                                <button 
+                                    class="btn btn-outline-secondary" 
+                                    type="button" 
+                                    id="togglePassword"
+                                >
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary">ログイン</button>
+                        </div>
+                    </form>
+                    
+                    <div class="mt-4 text-center">
+                        <p>アカウントをお持ちでない場合は <a href="/register">新規登録</a></p>
+                        <p><a href="/reset-request">パスフレーズをお忘れですか？</a></p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="text-center mt-3">
+                <button 
+                    class="btn btn-sm btn-outline-secondary" 
+                    id="darkModeToggle"
+                >
+                    <i class="bi bi-moon"></i> ダークモード切替
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // パスワード表示切替
+        const togglePassword = document.getElementById('togglePassword');
+        const password = document.getElementById('password');
+        
+        togglePassword.addEventListener('click', function() {
+            const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
+            password.setAttribute('type', type);
+            this.querySelector('i').classList.toggle('bi-eye');
+            this.querySelector('i').classList.toggle('bi-eye-slash');
+        });
+        
+        // ログインフォーム送信
+        const loginForm = document.getElementById('loginForm');
+        loginForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        username: document.getElementById('username').value,
+                        password: document.getElementById('password').value
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    window.location.href = '/dashboard';
+                } else {
+                    // エラーメッセージを表示
+                    const alertsDiv = document.getElementById('alerts');
+                    alertsDiv.innerHTML = `
+                        <div 
+                            class="alert alert-danger alert-dismissible fade show" 
+                            role="alert"
+                        >
+                            ${data.detail || 'ログインに失敗しました。ユーザー名とパスフレーズを確認してください。'}
+                            <button 
+                                type="button" 
+                                class="btn-close" 
+                                data-bs-dismiss="alert" 
+                                aria-label="Close"
+                            ></button>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                const alertsDiv = document.getElementById('alerts');
+                alertsDiv.innerHTML = `
+                    <div 
+                        class="alert alert-danger alert-dismissible fade show" 
+                        role="alert"
+                    >
+                        サーバーとの通信中にエラーが発生しました。しばらくしてからもう一度お試しください。
+                        <button 
+                            type="button" 
+                            class="btn-close" 
+                            data-bs-dismiss="alert" 
+                            aria-label="Close"
+                        ></button>
+                    </div>
+                `;
+            }
+        });
+    });
+</script>
+{% endblock %}
+
