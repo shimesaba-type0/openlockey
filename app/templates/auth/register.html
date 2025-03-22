@@ -146,10 +146,10 @@
             if (value.length >= 96) strength += 10;
             
             // 文字種による強度
-            if (/[a-z]/.test(value)) strength += 10;
-            if (/[A-Z]/.test(value)) strength += 10;
-            if (/[0-9]/.test(value)) strength += 10;
-            if (/[^a-zA-Z0-9]/.test(value)) strength += 20;
+            if (/[a-z]/.test(value)) strength += 15;
+            if (/[A-Z]/.test(value)) strength += 15;
+            if (/[0-9]/.test(value)) strength += 20;
+	    // 特殊文字は使用可能文字に含まれないため、評価から除外
             
             // 強度に応じた色の設定
             let barClass = 'bg-danger';
