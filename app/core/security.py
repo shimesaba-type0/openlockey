@@ -21,15 +21,20 @@ def generate_session_token():
 
 def generate_password(length=64):
     """安全なパスフレーズを生成する"""
-    # 使用する文字セット
-    alphabet = string.ascii_letters + string.digits
+    # 使用する文字セット（仕様に従って視覚的に混同しやすい文字を除外）
+    lowercase = "abcdefghijkmnopqrstuvwxyz"  # l を除外
+    uppercase = "ABCDEFGHJKLMNPQRSTUVWXYZ"   # I, O を除外
+    digits = "23456789"                      # 0, 1 を除外
+
+    # 全ての文字セットを組み合わせる
+    alphabet = lowercase + uppercase + digits
     
     # 少なくとも1つの大文字、小文字、数字を含むようにする
     while True:
         password = ''.join(secrets.choice(alphabet) for _ in range(length))
-        if (any(c.islower() for c in password) and
-            any(c.isupper() for c in password) and
-            any(c.isdigit() for c in password)):
+        if (any(c in lowercase for c in password) and
+            any(c in uppercase for c in password) and
+            any(c in digits for c in password)):
             break
     
     return password
