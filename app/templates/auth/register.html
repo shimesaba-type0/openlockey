@@ -1,0 +1,311 @@
+{% extends "base.html" %}
+
+{% block title %}新規登録 - OpenLockey{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow-sm mt-5">
+                <div class="card-body p-4">
+                    <div class="text-center mb-4">
+                        <h2 class="mb-3">アカウント作成</h2>
+                        <p class="text-muted">OpenLockeyへようこそ</p>
+                    </div>
+                    
+                    <form method="post" action="/api/register" id="registerForm">
+                        <div class="mb-3">
+                            <label for="username" class="form-label">ユーザー名</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-person"></i></span>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="username" 
+                                       name="username" 
+                                       required 
+                                       autofocus>
+                            </div>
+                            <div class="form-text">一意のユーザー名を入力してください。</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="password" class="form-label">パスフレーズ</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                                <input type="password" 
+                                       class="form-control" 
+                                       id="password" 
+                                       name="password" 
+                                       required 
+                                       minlength="32" 
+                                       maxlength="128">
+                                <button class="btn btn-outline-secondary" 
+                                        type="button" 
+                                        id="togglePassword">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            </div>
+                            <div class="form-text">
+                                32文字以上のパスフレーズを入力してください。
+                                自動生成機能では視覚的に混同しやすい文字（l, I, O, 0, 1）を除外していますが、
+                                パスワードマネージャーで生成したパスフレーズなど、すべての英数字を含むパスフレーズも利用できます。
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="passwordStrength" class="form-label">パスフレーズ強度</label>
+                            <div class="progress">
+                                <div id="passwordStrength" 
+                                     class="progress-bar" 
+                                     role="progressbar" 
+                                     style="width: 0%;" 
+                                     aria-valuenow="0" 
+                                     aria-valuemin="0" 
+                                     aria-valuemax="100"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <button type="button" 
+                                    id="generatePassword" 
+                                    class="btn btn-outline-primary w-100">
+                                <i class="bi bi-shield-lock"></i> 安全なパスフレーズを生成
+                            </button>
+                            <div class="mt-2">
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" 
+                                           type="radio" 
+                                           name="passwordLength" 
+                                           id="length64" 
+                                           value="64" 
+                                           checked>
+                                    <label class="form-check-label" for="length64">64文字</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" 
+                                           type="radio" 
+                                           name="passwordLength" 
+                                           id="length32" 
+                                           value="32">
+                                    <label class="form-check-label" for="length32">32文字</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" 
+                                           type="radio" 
+                                           name="passwordLength" 
+                                           id="length128" 
+                                           value="128">
+                                    <label class="form-check-label" for="length128">128文字</label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">アカウント作成</button>
+                            <a href="/" class="btn btn-outline-secondary">ログインページに戻る</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="text-center mt-3">
+                <button class="btn btn-sm btn-outline-secondary" id="darkModeToggle">
+                    <i class="bi bi-moon"></i> ダークモード切替
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // パスワード表示切替
+        const togglePassword = document.getElementById('togglePassword');
+        const password = document.getElementById('password');
+        
+        togglePassword.addEventListener('click', function() {
+            const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
+            password.setAttribute('type', type);
+            this.querySelector('i').classList.toggle('bi-eye');
+            this.querySelector('i').classList.toggle('bi-eye-slash');
+        });
+        
+        // パスワード強度メーター
+        const passwordInput = document.getElementById('password');
+        const strengthBar = document.getElementById('passwordStrength');
+        
+        passwordInput.addEventListener('input', function() {
+            const value = passwordInput.value;
+            let strength = 0;
+            
+            // 長さによる強度
+            if (value.length >= 32) strength += 25;
+            if (value.length >= 64) strength += 15;
+            if (value.length >= 96) strength += 10;
+            
+            // 文字種による強度
+            if (/[a-z]/.test(value)) strength += 10;
+            if (/[A-Z]/.test(value)) strength += 10;
+            if (/[0-9]/.test(value)) strength += 10;
+            if (/[^a-zA-Z0-9]/.test(value)) strength += 20;
+            
+            // 強度に応じた色の設定
+            let barClass = 'bg-danger';
+            if (strength >= 40) barClass = 'bg-warning';
+            if (strength >= 70) barClass = 'bg-info';
+            if (strength >= 90) barClass = 'bg-success';
+            
+            strengthBar.className = `progress-bar ${barClass}`;
+            strengthBar.style.width = `${strength}%`;
+            strengthBar.setAttribute('aria-valuenow', strength);
+        });
+        
+        // パスワード生成
+        const generateButton = document.getElementById('generatePassword');
+        
+        generateButton.addEventListener('click', async function() {
+            const length = document.querySelector('input[name="passwordLength"]:checked').value;
+            
+            try {
+                const response = await fetch('/api/user/password/generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ length: parseInt(length) })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.password) {
+                    passwordInput.value = data.password;
+                    passwordInput.dispatchEvent(new Event('input')); // 強度メーターを更新
+                    
+                    // パスワードを表示状態にする
+                    passwordInput.setAttribute('type', 'text');
+                    togglePassword.querySelector('i').classList.remove('bi-eye');
+                    togglePassword.querySelector('i').classList.add('bi-eye-slash');
+                } else {
+                    // フロントエンドでパスワードを生成（APIが利用できない場合のフォールバック）
+                    // 視覚的に混同しやすい文字（l, I, O, 0, 1）を除外
+                    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+                    let generatedPassword = '';
+                    
+                    for (let i = 0; i < length; i++) {
+                        generatedPassword += chars.charAt(Math.floor(Math.random() * chars.length));
+                    }
+                    
+                    passwordInput.value = generatedPassword;
+                    passwordInput.dispatchEvent(new Event('input')); // 強度メーターを更新
+                    
+                    // パスワードを表示状態にする
+                    passwordInput.setAttribute('type', 'text');
+                    togglePassword.querySelector('i').classList.remove('bi-eye');
+                    togglePassword.querySelector('i').classList.add('bi-eye-slash');
+                }
+            } catch (error) {
+                console.error('Password generation error:', error);
+                // フロントエンドでパスワードを生成（エラー時のフォールバック）
+                // 視覚的に混同しやすい文字（l, I, O, 0, 1）を除外
+                const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+                let generatedPassword = '';
+                
+                for (let i = 0; i < length; i++) {
+                    generatedPassword += chars.charAt(Math.floor(Math.random() * chars.length));
+                }
+                
+                passwordInput.value = generatedPassword;
+                passwordInput.dispatchEvent(new Event('input')); // 強度メーターを更新
+                
+                // パスワードを表示状態にする
+                passwordInput.setAttribute('type', 'text');
+                togglePassword.querySelector('i').classList.remove('bi-eye');
+                togglePassword.querySelector('i').classList.add('bi-eye-slash');
+            }
+        });
+        
+        // 登録フォーム送信
+        const registerForm = document.getElementById('registerForm');
+        registerForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            // パスワードの長さチェック
+            const password = document.getElementById('password').value;
+            if (password.length < 32) {
+                const alertsDiv = document.getElementById('alerts');
+                alertsDiv.innerHTML = `
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        パスフレーズは32文字以上である必要があります。
+                        <button type="button" 
+                                class="btn-close" 
+                                data-bs-dismiss="alert" 
+                                aria-label="Close"></button>
+                    </div>
+                `;
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        username: document.getElementById('username').value,
+                        password: password
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // 登録成功
+                    const alertsDiv = document.getElementById('alerts');
+                    alertsDiv.innerHTML = `
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            アカウントが正常に作成されました。ログインしてください。
+                            <button type="button" 
+                                    class="btn-close" 
+                                    data-bs-dismiss="alert" 
+                                    aria-label="Close"></button>
+                        </div>
+                    `;
+                    
+                    // 3秒後にログインページにリダイレクト
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 3000);
+                } else {
+                    // エラーメッセージを表示
+                    const alertsDiv = document.getElementById('alerts');
+                    alertsDiv.innerHTML = `
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            ${data.detail || 'アカウント作成に失敗しました。'}
+                            <button type="button" 
+                                    class="btn-close" 
+                                    data-bs-dismiss="alert" 
+                                    aria-label="Close"></button>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Registration error:', error);
+                const alertsDiv = document.getElementById('alerts');
+                alertsDiv.innerHTML = `
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        サーバーとの通信中にエラーが発生しました。しばらくしてからもう一度お試しください。
+                        <button type="button" 
+                                class="btn-close" 
+                                data-bs-dismiss="alert" 
+                                aria-label="Close"></button>
+                    </div>
+                `;
+            }
+        });
+    });
+</script>
+{% endblock %}
+
