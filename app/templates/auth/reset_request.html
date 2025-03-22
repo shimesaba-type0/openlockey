@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block title %}パスフレーズリセット依頼 - OpenLockey{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="card shadow-sm mt-5">
+                <div class="card-body p-4">
+                    <div class="text-center mb-4">
+                        <h2 class="mb-3">パスフレーズリセット依頼</h2>
+                        <p class="text-muted">パスフレーズを忘れた場合は、管理者にリセットを依頼してください。</p>
+                    </div>
+                    
+                    <form method="post" action="/api/user/reset-request" id="resetRequestForm">
+                        <div class="mb-3">
+                            <label for="username" class="form-label">ユーザー名</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-person"></i></span>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="username" 
+                                       name="username" 
+                                       required 
+                                       autofocus>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="request_reason" class="form-label">依頼理由</label>
+                            <textarea class="form-control" 
+                                      id="request_reason" 
+                                      name="request_reason" 
+                                      rows="4" 
+                                      required></textarea>
+                            <div class="form-text">リセットが必要な理由を簡潔に説明してください。</div>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">リセット依頼を送信</button>
+                            <a href="/" class="btn btn-outline-secondary">ログインページに戻る</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="text-center mt-3">
+                <button class="btn btn-sm btn-outline-secondary" 
+                        id="darkModeToggle">
+                    <i class="bi bi-moon"></i> ダークモード切替
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // リセット依頼フォーム送信
+        const resetRequestForm = document.getElementById('resetRequestForm');
+        resetRequestForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            try {
+                const response = await fetch('/api/user/reset-request', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        username: document.getElementById('username').value,
+                        request_reason: document.getElementById('request_reason').value
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // 依頼成功
+                    const alertsDiv = document.getElementById('alerts');
+                    alertsDiv.innerHTML = `
+                        <div class="alert alert-success alert-dismissible fade show" 
+                             role="alert">
+                            リセット依頼が正常に送信されました。管理者が対応するまでお待ちください。
+                            <button type="button" 
+                                    class="btn-close" 
+                                    data-bs-dismiss="alert" 
+                                    aria-label="Close"></button>
+                        </div>
+                    `;
+                    
+                    // フォームをクリア
+                    resetRequestForm.reset();
+                    
+                    // 5秒後にログインページにリダイレクト
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 5000);
+                } else {
+                    // エラーメッセージを表示
+                    const alertsDiv = document.getElementById('alerts');
+                    alertsDiv.innerHTML = `
+                        <div class="alert alert-danger alert-dismissible fade show" 
+                             role="alert">
+                            ${data.detail || 'リセット依頼の送信に失敗しました。'}
+                            <button type="button" 
+                                    class="btn-close" 
+                                    data-bs-dismiss="alert" 
+                                    aria-label="Close"></button>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Reset request error:', error);
+                const alertsDiv = document.getElementById('alerts');
+                alertsDiv.innerHTML = `
+                        <div class="alert alert-danger alert-dismissible fade show" 
+                             role="alert">
+                            サーバーとの通信中にエラーが発生しました。しばらくしてからもう一度お試しください。
+                            <button type="button" 
+                                    class="btn-close" 
+                                    data-bs-dismiss="alert" 
+                                    aria-label="Close"></button>
+                        </div>
+                    `;
+            }
+        });
+    });
+</script>
+{% endblock %}
+
