@@ -1,0 +1,495 @@
+{% extends "base.html" %}
+
+{% block title %}システムログ - OpenLockey{% endblock %}
+
+{% block header %}システムログ{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12 mb-4">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0"><i class="bi bi-journal-text me-2"></i>システムログ</h5>
+                    <div>
+                        <div class="btn-group me-2" role="group">
+                            <button 
+                                type="button" 
+                                class="btn btn-sm btn-outline-secondary active log-type-btn" 
+                                data-type="all"
+                            >全て</button>
+                            <button 
+                                type="button" 
+                                class="btn btn-sm btn-outline-secondary log-type-btn" 
+                                data-type="auth"
+                            >認証</button>
+                            <button 
+                                type="button" 
+                                class="btn btn-sm btn-outline-secondary log-type-btn" 
+                                data-type="admin"
+                            >管理</button>
+                            <button 
+                                type="button" 
+                                class="btn btn-sm btn-outline-secondary log-type-btn" 
+                                data-type="system"
+                            >システム</button>
+                            <button 
+                                type="button" 
+                                class="btn btn-sm btn-outline-secondary log-type-btn" 
+                                data-type="error"
+                            >エラー</button>
+                        </div>
+                        <div class="btn-group" role="group">
+                            <button 
+                                type="button" 
+                                class="btn btn-sm btn-outline-secondary" 
+                                id="refreshLogsBtn"
+                            ><i class="bi bi-arrow-clockwise me-1"></i>更新</button>
+                            <button 
+                                type="button" 
+                                class="btn btn-sm btn-outline-secondary" 
+                                id="downloadLogsBtn"
+                            ><i class="bi bi-download me-1"></i>ダウンロード</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <div class="row g-2">
+                            <div class="col-md-3">
+                                <div class="input-group">
+                                    <span class="input-group-text">開始日</span>
+                                    <input 
+                                        type="date" 
+                                        class="form-control" 
+                                        id="startDate"
+                                    >
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="input-group">
+                                    <span class="input-group-text">終了日</span>
+                                    <input 
+                                        type="date" 
+                                        class="form-control" 
+                                        id="endDate"
+                                    >
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="input-group">
+                                    <span class="input-group-text">検索</span>
+                                    <input 
+                                        type="text" 
+                                        class="form-control" 
+                                        id="searchInput" 
+                                        placeholder="キーワード検索..."
+                                    >
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <button 
+                                    class="btn btn-primary w-100" 
+                                    id="filterLogsBtn"
+                                >フィルター適用</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>日時</th>
+                                    <th>レベル</th>
+                                    <th>タイプ</th>
+                                    <th>ユーザー</th>
+                                    <th>IPアドレス</th>
+                                    <th>メッセージ</th>
+                                    <th>詳細</th>
+                                </tr>
+                            </thead>
+                            <tbody id="logsTable">
+                                {% for log in logs %}
+                                <tr class="log-row" data-type="{{ log.type }}">
+                                    <td>{{ log.timestamp.strftime('%Y/%m/%d %H:%M:%S') }}</td>
+                                    <td>
+                                        {% if log.level == 'INFO' %}
+                                            <span class="badge bg-info">INFO</span>
+                                        {% elif log.level == 'WARNING' %}
+                                            <span class="badge bg-warning">WARNING</span>
+                                        {% elif log.level == 'ERROR' %}
+                                            <span class="badge bg-danger">ERROR</span>
+                                        {% elif log.level == 'CRITICAL' %}
+                                            <span class="badge bg-dark">CRITICAL</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ log.level }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ log.type }}</td>
+                                    <td>
+                                        {% if log.user_id %}
+                                            <a href="/admin/users/{{ log.user_id }}">{{ log.username }}</a>
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ log.ip_address or '-' }}</td>
+                                    <td>{{ log.message }}</td>
+                                    <td>
+                                        {% if log.details %}
+                                            <button 
+                                                type="button" 
+                                                class="btn btn-sm btn-outline-secondary view-details-btn" 
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#logDetailsModal" 
+                                                data-log-details="{{ log.details }}"
+                                            >詳細</button>
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- ページネーション -->
+                    <nav aria-label="ログページネーション">
+                        <ul class="pagination justify-content-center" id="logsPagination">
+                            <li class="page-item disabled">
+                                <a class="page-link" href="#" tabindex="-1" aria-disabled="true">前へ</a>
+                            </li>
+                            <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                            <li class="page-item"><a class="page-link" href="#">2</a></li>
+                            <li class="page-item"><a class="page-link" href="#">3</a></li>
+                            <li class="page-item">
+                                <a class="page-link" href="#">次へ</a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ログ詳細モーダル -->
+<div class="modal fade" id="logDetailsModal" tabindex="-1" aria-labelledby="logDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="logDetailsModalLabel">ログ詳細</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <pre id="logDetailsContent" class="bg-light p-3 rounded"></pre>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">閉じる</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 現在の日付を取得して日付フィルターの初期値を設定
+        const today = new Date();
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(today.getDate() - 30);
+        
+        document.getElementById('startDate').valueAsDate = thirtyDaysAgo;
+        document.getElementById('endDate').valueAsDate = today;
+        
+        // ログの取得
+        async function fetchLogs(params = {}) {
+            try {
+                // クエリパラメータの構築
+                const queryParams = new URLSearchParams();
+                if (params.type && params.type !== 'all') {
+                    queryParams.append('type', params.type);
+                }
+                if (params.start_date) {
+                    queryParams.append('start_date', params.start_date);
+                }
+                if (params.end_date) {
+                    queryParams.append('end_date', params.end_date);
+                }
+                if (params.search) {
+                    queryParams.append('search', params.search);
+                }
+                if (params.page) {
+                    queryParams.append('page', params.page);
+                }
+                
+                const url = `/api/admin/logs?${queryParams.toString()}`;
+                const response = await fetch(url);
+                
+                if (!response.ok) {
+                    throw new Error('ログの取得に失敗しました。');
+                }
+                
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                console.error('Error fetching logs:', error);
+                showAlert('danger', error.message || 'ログの取得中にエラーが発生しました。');
+                return { logs: [], pagination: { current_page: 1, total_pages: 1, pages: [1] } };
+            }
+        }
+        
+        // テーブルの更新
+        function updateTable(data) {
+            const tableBody = document.getElementById('logsTable');
+            tableBody.innerHTML = '';
+            
+            if (!data.logs || data.logs.length === 0) {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="text-center">ログが見つかりません。</td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            data.logs.forEach(log => {
+                const row = document.createElement('tr');
+                row.className = 'log-row';
+                row.dataset.type = log.type;
+                
+                // レベルに応じたバッジの色
+                let levelBadge;
+                if (log.level === 'INFO') {
+                    levelBadge = '<span class="badge bg-info">INFO</span>';
+                } else if (log.level === 'WARNING') {
+                    levelBadge = '<span class="badge bg-warning">WARNING</span>';
+                } else if (log.level === 'ERROR') {
+                    levelBadge = '<span class="badge bg-danger">ERROR</span>';
+                } else if (log.level === 'CRITICAL') {
+                    levelBadge = '<span class="badge bg-dark">CRITICAL</span>';
+                } else {
+                    levelBadge = `<span class="badge bg-secondary">${log.level}</span>`;
+                }
+                
+                // 日時のフォーマット
+                const timestamp = new Date(log.timestamp);
+                const formattedTimestamp = timestamp.toLocaleString('ja-JP', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+                
+                // ユーザー情報
+                let userCell = '-';
+                if (log.user_id) {
+                    userCell = `<a href="/admin/users/${log.user_id}">${log.username}</a>`;
+                }
+                
+                // 詳細ボタン
+                let detailsButton = '-';
+                if (log.details) {
+                    detailsButton = `
+                        <button 
+                            type="button" 
+                            class="btn btn-sm btn-outline-secondary view-details-btn" 
+                            data-bs-toggle="modal" 
+                            data-bs-target="#logDetailsModal" 
+                            data-log-details='${JSON.stringify(log.details)}'
+                        >詳細</button>
+                    `;
+                }
+                
+                row.innerHTML = `
+                    <td>${formattedTimestamp}</td>
+                    <td>${levelBadge}</td>
+                    <td>${log.type}</td>
+                    <td>${userCell}</td>
+                    <td>${log.ip_address || '-'}</td>
+                    <td>${log.message}</td>
+                    <td>${detailsButton}</td>
+                `;
+                
+                tableBody.appendChild(row);
+            });
+            
+            // 詳細ボタンのイベントリスナー設定
+            setupDetailsButtons();
+            
+            // ページネーションの更新
+            updatePagination(data.pagination);
+        }
+        
+        // ページネーションの更新
+        function updatePagination(pagination) {
+            const paginationElement = document.getElementById('logsPagination');
+            paginationElement.innerHTML = '';
+            
+            // 「前へ」ボタン
+            const prevItem = document.createElement('li');
+            prevItem.className = `page-item ${pagination.current_page === 1 ? 'disabled' : ''}`;
+            prevItem.innerHTML = `
+                <a class="page-link" href="#" data-page="${pagination.current_page - 1}" aria-disabled="${pagination.current_page === 1}">前へ</a>
+            `;
+            paginationElement.appendChild(prevItem);
+            
+            // ページ番号
+            pagination.pages.forEach(page => {
+                const pageItem = document.createElement('li');
+                pageItem.className = `page-item ${page === pagination.current_page ? 'active' : ''}`;
+                pageItem.innerHTML = `
+                    <a class="page-link" href="#" data-page="${page}">${page}</a>
+                `;
+                paginationElement.appendChild(pageItem);
+            });
+            
+            // 「次へ」ボタン
+            const nextItem = document.createElement('li');
+            nextItem.className = `page-item ${pagination.current_page === pagination.total_pages ? 'disabled' : ''}`;
+            nextItem.innerHTML = `
+                <a class="page-link" href="#" data-page="${pagination.current_page + 1}" aria-disabled="${pagination.current_page === pagination.total_pages}">次へ</a>
+            `;
+            paginationElement.appendChild(nextItem);
+            
+            // ページネーションのイベントリスナー設定
+            setupPaginationListeners();
+        }
+        
+        // ページネーションのイベントリスナー設定
+        function setupPaginationListeners() {
+            document.querySelectorAll('#logsPagination .page-link').forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    if (this.getAttribute('aria-disabled') === 'true') {
+                        return;
+                    }
+                    
+                    const page = parseInt(this.dataset.page);
+                    loadLogs({ page });
+                });
+            });
+        }
+        
+        // 詳細ボタンのイベントリスナー設定
+        function setupDetailsButtons() {
+            document.querySelectorAll('.view-details-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    const details = JSON.parse(this.dataset.logDetails);
+                    const detailsContent = document.getElementById('logDetailsContent');
+                    
+                    if (typeof details === 'object') {
+                        detailsContent.textContent = JSON.stringify(details, null, 2);
+                    } else {
+                        detailsContent.textContent = details;
+                    }
+                });
+            });
+        }
+        
+        // アラートの表示
+        function showAlert(type, message) {
+            const alertsDiv = document.getElementById('alerts');
+            alertsDiv.innerHTML = `
+                <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                    ${message}
+                    <button 
+                        type="button" 
+                        class="btn-close" 
+                        data-bs-dismiss="alert" 
+                        aria-label="Close"
+                    ></button>
+                </div>
+            `;
+        }
+        
+        // ログの読み込み
+        async function loadLogs(additionalParams = {}) {
+            // 現在のフィルター状態を取得
+            const type = document.querySelector('.log-type-btn.active').dataset.type;
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const search = document.getElementById('searchInput').value;
+            
+            // パラメータの構築
+            const params = {
+                type,
+                start_date: startDate,
+                end_date: endDate,
+                search: search,
+                ...additionalParams
+            };
+            
+            // ログの取得と表示
+            const data = await fetchLogs(params);
+            updateTable(data);
+        }
+        
+        // タイプフィルターボタンのイベントリスナー
+        document.querySelectorAll('.log-type-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                // アクティブクラスの切り替え
+                document.querySelectorAll('.log-type-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                this.classList.add('active');
+                
+                // ログの再読み込み
+                loadLogs({ page: 1 });
+            });
+        });
+        
+        // フィルターボタンのイベントリスナー
+        document.getElementById('filterLogsBtn').addEventListener('click', function() {
+            loadLogs({ page: 1 });
+        });
+        
+        // 更新ボタンのイベントリスナー
+        document.getElementById('refreshLogsBtn').addEventListener('click', function() {
+            loadLogs();
+        });
+        
+        // ダウンロードボタンのイベントリスナー
+        document.getElementById('downloadLogsBtn').addEventListener('click', async function() {
+            try {
+                // 現在のフィルター状態を取得
+                const type = document.querySelector('.log-type-btn.active').dataset.type;
+                const startDate = document.getElementById('startDate').value;
+                const endDate = document.getElementById('endDate').value;
+                const search = document.getElementById('searchInput').value;
+                
+                // クエリパラメータの構築
+                const queryParams = new URLSearchParams();
+                if (type && type !== 'all') {
+                    queryParams.append('type', type);
+                }
+                if (startDate) {
+                    queryParams.append('start_date', startDate);
+                }
+                if (endDate) {
+                    queryParams.append('end_date', endDate);
+                }
+                if (search) {
+                    queryParams.append('search', search);
+                }
+                
+                // ダウンロードリクエスト
+                const url = `/api/admin/logs/download?${queryParams.toString()}`;
+                window.location.href = url;
+            } catch (error) {
+                console.error('Error downloading logs:', error);
+                showAlert('danger', 'ログのダウンロード中にエラーが発生しました。');
+            }
+        });
+        
+        // 初期データの読み込み
+        loadLogs();
+    });
+</script>
+{% endblock %}
+
