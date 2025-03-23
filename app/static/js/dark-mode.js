@@ -64,20 +64,20 @@ function updateDarkModeIcon(isDark) {
     const darkModeToggle = document.getElementById('darkModeToggle');
     
     if (darkModeToggle) {
-        // アイコンの更新
-        if (!darkModeToggle.querySelector('.bi-sun')) {
-            // アイコン要素がまだ存在しない場合は作成
-            darkModeToggle.innerHTML = isDark 
-                ? '<i class="bi bi-sun"></i>'
-                : '<i class="bi bi-moon"></i>';
-        }
-        
-        // ボタンのテキストを更新（テキストがある場合）
+        // ボタンにテキストがあるかチェック
         const buttonText = darkModeToggle.textContent.trim();
+        
+        // アイコンを常に更新（条件チェックを削除）
         if (buttonText) {
+            // テキストがある場合
             darkModeToggle.innerHTML = isDark 
                 ? '<i class="bi bi-sun"></i> ライトモード切替'
                 : '<i class="bi bi-moon"></i> ダークモード切替';
+        } else {
+            // テキストがない場合（アイコンのみ）
+            darkModeToggle.innerHTML = isDark 
+                ? '<i class="bi bi-sun"></i>'
+                : '<i class="bi bi-moon"></i>';
         }
     }
 }
