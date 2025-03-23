@@ -6,7 +6,7 @@ import secrets
 
 from app.core.database import get_db
 from app.core.security import get_password_hash, verify_password, generate_session_token
-from app.models.models import User, Session, LoginHistory
+from app.models.models import User, Session, LoginHistory, ResetRequest
 from app.schemas.schemas import UserCreate, UserLogin, UserOut, SessionOut
 from app.core.config import settings
 
