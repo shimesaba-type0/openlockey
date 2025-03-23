@@ -1,0 +1,318 @@
+{% extends "base.html" %}
+
+{% block title %}リセット依頼管理 - OpenLockey{% endblock %}
+
+{% block header %}リセット依頼管理{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12 mb-4">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0"><i class="bi bi-envelope me-2"></i>パスワードリセット依頼</h5>
+                    <div>
+                        <div class="btn-group" role="group">
+                            <button 
+                                type="button" 
+                                class="btn btn-sm btn-outline-secondary active filter-btn" 
+                                data-filter="all"
+                            >全て</button>
+                            <button 
+                                type="button" 
+                                class="btn btn-sm btn-outline-secondary filter-btn" 
+                                data-filter="pending"
+                            >保留中</button>
+                            <button 
+                                type="button" 
+                                class="btn btn-sm btn-outline-secondary filter-btn" 
+                                data-filter="approved"
+                            >承認済</button>
+                            <button 
+                                type="button" 
+                                class="btn btn-sm btn-outline-secondary filter-btn" 
+                                data-filter="rejected"
+                            >拒否済</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>ユーザー</th>
+                                    <th>依頼理由</th>
+                                    <th>依頼日時</th>
+                                    <th>ステータス</th>
+                                    <th>処理者</th>
+                                    <th>処理日時</th>
+                                    <th>アクション</th>
+                                </tr>
+                            </thead>
+                            <tbody id="requestsTable">
+                                {% for request in reset_requests %}
+                                <tr class="request-row" data-status="{{ request.status }}">
+                                    <td>{{ request.id }}</td>
+                                    <td>
+                                        <a href="/admin/users/{{ request.user_id }}">{{ request.username }}</a>
+                                    </td>
+                                    <td>{{ request.request_reason }}</td>
+                                    <td>{{ request.timestamp.strftime('%Y/%m/%d %H:%M:%S') }}</td>
+                                    <td>
+                                        {% if request.status == 'pending' %}
+                                            <span class="badge bg-warning">保留中</span>
+                                        {% elif request.status == 'approved' %}
+                                            <span class="badge bg-success">承認済</span>
+                                        {% elif request.status == 'rejected' %}
+                                            <span class="badge bg-danger">拒否済</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if request.resolver_username %}
+                                            {{ request.resolver_username }}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if request.resolved_at %}
+                                            {{ request.resolved_at.strftime('%Y/%m/%d %H:%M:%S') }}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if request.status == 'pending' %}
+                                            <div class="btn-group" role="group">
+                                                <button 
+                                                    type="button" 
+                                                    class="btn btn-sm btn-success approve-btn" 
+                                                    data-request-id="{{ request.id }}"
+                                                >承認</button>
+                                                <button 
+                                                    type="button" 
+                                                    class="btn btn-sm btn-danger reject-btn" 
+                                                    data-request-id="{{ request.id }}"
+                                                >拒否</button>
+                                            </div>
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // リセット依頼の取得
+        async function fetchResetRequests(status = null) {
+            try {
+                let url = '/api/admin/reset-requests';
+                if (status && status !== 'all') {
+                    url += `?status=${status}`;
+                }
+                
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error('リセット依頼の取得に失敗しました。');
+                }
+                
+                const requests = await response.json();
+                return requests;
+            } catch (error) {
+                console.error('Error fetching reset requests:', error);
+                showAlert('danger', error.message || 'リセット依頼の取得中にエラーが発生しました。');
+                return [];
+            }
+        }
+        
+        // テーブルの更新
+        function updateTable(requests) {
+            const tableBody = document.getElementById('requestsTable');
+            tableBody.innerHTML = '';
+            
+            requests.forEach(request => {
+                const row = document.createElement('tr');
+                row.className = 'request-row';
+                row.dataset.status = request.status;
+                
+                // ステータスに応じたバッジの色
+                let statusBadge;
+                if (request.status === 'pending') {
+                    statusBadge = '<span class="badge bg-warning">保留中</span>';
+                } else if (request.status === 'approved') {
+                    statusBadge = '<span class="badge bg-success">承認済</span>';
+                } else if (request.status === 'rejected') {
+                    statusBadge = '<span class="badge bg-danger">拒否済</span>';
+                }
+                
+                // アクションボタン
+                let actionButtons = '-';
+                if (request.status === 'pending') {
+                    actionButtons = `
+                        <div class="btn-group" role="group">
+                            <button 
+                                type="button" 
+                                class="btn btn-sm btn-success approve-btn" 
+                                data-request-id="${request.id}"
+                            >承認</button>
+                            <button 
+                                type="button" 
+                                class="btn btn-sm btn-danger reject-btn" 
+                                data-request-id="${request.id}"
+                            >拒否</button>
+                        </div>
+                    `;
+                }
+                
+                // 日時のフォーマット
+                const timestamp = new Date(request.timestamp);
+                const formattedTimestamp = timestamp.toLocaleString('ja-JP', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+                
+                let resolvedAt = '-';
+                if (request.resolved_at) {
+                    const resolvedDate = new Date(request.resolved_at);
+                    resolvedAt = resolvedDate.toLocaleString('ja-JP', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit'
+                    });
+                }
+                
+                row.innerHTML = `
+                    <td>${request.id}</td>
+                    <td><a href="/admin/users/${request.user_id}">${request.username}</a></td>
+                    <td>${request.request_reason}</td>
+                    <td>${formattedTimestamp}</td>
+                    <td>${statusBadge}</td>
+[O                    <td>${request.resolver_username || '-'}</td>
+                    <td>${resolvedAt}</td>
+                    <td>${actionButtons}</td>
+                `;
+                
+                tableBody.appendChild(row);
+            });
+            
+            // イベントリスナーの再設定
+            setupActionButtons();
+        }
+        
+        // アラートの表示
+        function showAlert(type, message) {
+            const alertsDiv = document.getElementById('alerts');
+            alertsDiv.innerHTML = `
+                <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                    ${message}
+                    <button 
+                        type="button" 
+                        class="btn-close" 
+                        data-bs-dismiss="alert" 
+                        aria-label="Close"
+                    ></button>
+                </div>
+            `;
+        }
+        
+        // リセット依頼の承認/拒否
+        async function updateResetRequest(requestId, status) {
+            try {
+                const response = await fetch(`/api/admin/reset-requests/${requestId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ status })
+                });
+                
+                if (!response.ok) {
+                    const data = await response.json();
+                    throw new Error(data.detail || 'リセット依頼の更新に失敗しました。');
+                }
+                
+                // 成功メッセージの表示
+                const message = status === 'approved' 
+                    ? 'リセット依頼が承認されました。' 
+                    : 'リセット依頼が拒否されました。';
+                showAlert('success', message);
+                
+                // テーブルの再読み込み
+                const activeFilter = document.querySelector('.filter-btn.active').dataset.filter;
+                const requests = await fetchResetRequests(activeFilter);
+                updateTable(requests);
+                
+            } catch (error) {
+                console.error('Error updating reset request:', error);
+                showAlert('danger', error.message || 'リセット依頼の更新中にエラーが発生しました。');
+            }
+        }
+        
+        // アクションボタンのイベントリスナー設定
+        function setupActionButtons() {
+            // 承認ボタン
+            document.querySelectorAll('.approve-btn').forEach(button => {
+                button.addEventListener('click', async function() {
+                    const requestId = this.dataset.requestId;
+                    if (confirm('このリセット依頼を承認してもよろしいですか？')) {
+                        await updateResetRequest(requestId, 'approved');
+                    }
+                });
+            });
+            
+            // 拒否ボタン
+            document.querySelectorAll('.reject-btn').forEach(button => {
+                button.addEventListener('click', async function() {
+                    const requestId = this.dataset.requestId;
+                    if (confirm('このリセット依頼を拒否してもよろしいですか？')) {
+                        await updateResetRequest(requestId, 'rejected');
+                    }
+                });
+            });
+        }
+        
+        // フィルターボタンのイベントリスナー
+        document.querySelectorAll('.filter-btn').forEach(button => {
+            button.addEventListener('click', async function() {
+                // アクティブクラスの切り替え
+                document.querySelectorAll('.filter-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                this.classList.add('active');
+                
+                // フィルター適用
+                const filter = this.dataset.filter;
+                const requests = await fetchResetRequests(filter);
+                updateTable(requests);
+            });
+        });
+        
+        // 初期データの読み込み
+        (async function() {
+            const requests = await fetchResetRequests();
+            updateTable(requests);
+        })();
+    });
+</script>
+{% endblock %}
+
