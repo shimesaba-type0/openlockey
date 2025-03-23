@@ -6,7 +6,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from starlette.middleware.sessions import SessionMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from app.core.config import settings
 from app.core.database import engine, Base, get_db
@@ -298,6 +298,138 @@ async def admin_users_page(request: Request):
         "search_query": "",
         "status_filter": "all",
         "now": datetime.now()
+    })
+
+# システムログページ（管理者認証必須）
+@app.get("/admin/logs", response_class=HTMLResponse)
+async def admin_logs_page(request: Request):
+    # TODO: 管理者認証チェック
+    # 仮のログデータ
+    logs = [
+        {
+            "timestamp": datetime.now(),
+            "level": "INFO",
+            "type": "auth",
+            "user_id": 1,
+            "username": "admin",
+            "ip_address": "127.0.0.1",
+            "message": "ログイン成功",
+            "details": None
+        },
+        {
+            "timestamp": datetime.now() - timedelta(minutes=5),
+            "level": "WARNING",
+            "type": "auth",
+            "user_id": 2,
+            "username": "user1",
+            "ip_address": "192.168.1.1",
+            "message": "ログイン失敗: パスフレーズが正しくありません",
+            "details": {"attempt": 1, "browser": "Chrome", "os": "Windows"}
+        },
+        {
+            "timestamp": datetime.now() - timedelta(minutes=10),
+            "level": "ERROR",
+            "type": "system",
+            "user_id": None,
+            "username": None,
+            "ip_address": None,
+            "message": "データベース接続エラー",
+            "details": {"error": "Connection refused", "db": "postgres"}
+        }
+    ]
+
+    return templates.TemplateResponse("admin/logs.html", {
+        "request": request,
+        "logs": logs
+    })
+
+# システム設定ページ（管理者認証必須）
+@app.get("/admin/settings", response_class=HTMLResponse)
+async def admin_settings_page(request: Request):
+    # TODO: 管理者認証チェック
+    # 仮の設定データ
+    settings = {
+        # 認証設定
+        "session_expire_hours": 24,
+        "max_login_attempts": 5,
+        "lockout_duration_minutes": 30,
+        "min_password_length": 12,
+        "require_special_chars": True,
+        "require_numbers": True,
+        "require_mixed_case": True,
+
+        # システム設定
+        "app_name": "OpenLockey",
+        "listen_ip": "0.0.0.0",
+        "listen_port": 8000,
+        "debug": True,
+        "log_level": "INFO",
+
+        # バックアップ設定
+        "enable_auto_backup": True,
+        "backup_interval_hours": 24,
+        "backup_retention_days": 30,
+        "backup_path": "/app/backups",
+
+        # メール設定
+        "enable_email": False,
+        "smtp_server": "smtp.example.com",
+        "smtp_port": 587,
+        "smtp_username": "user@example.com",
+        "smtp_password": "password",
+        "email_sender": "noreply@example.com",
+        "smtp_use_tls": True
+    }
+
+    return templates.TemplateResponse("admin/settings.html", {
+        "request": request,
+        "settings": settings
+    })
+
+# リセット依頼管理ページ（管理者認証必須）
+@app.get("/admin/reset-requests", response_class=HTMLResponse)
+async def admin_reset_requests_page(request: Request):
+    # TODO: 管理者認証チェック
+    # 仮のリセット依頼データ
+    reset_requests = [
+        {
+            "id": 1,
+            "user_id": 2,
+            "username": "user1",
+            "request_reason": "パスフレーズを忘れました",
+            "timestamp": datetime.now() - timedelta(days=1),
+            "status": "pending",
+            "resolved_by": None,
+            "resolver_username": None,
+            "resolved_at": None
+        },
+        {
+            "id": 2,
+            "user_id": 3,
+            "username": "user2",
+            "request_reason": "アカウントがロックされました",
+            "timestamp": datetime.now() - timedelta(days=2),
+            "status": "approved",
+            "resolved_by": 1,
+            "resolver_username": "admin",
+            "resolved_at": datetime.now() - timedelta(days=1)
+        },
+        {
+            "id": 3,
+            "user_id": 4,
+            "username": "user3",
+            "request_reason": "セキュリティ上の理由でリセットしたい",
+            "timestamp": datetime.now() - timedelta(days=3),
+            "status": "rejected",
+            "resolved_by": 1,
+            "resolver_username": "admin",
+            "resolved_at": datetime.now() - timedelta(days=2)
+        }
+    ]
+
+    return templates.TemplateResponse("admin/reset_requests.html", {
+        "request": request,
+        "reset_requests": reset_requests
     })
 
 # ログアウト処理
