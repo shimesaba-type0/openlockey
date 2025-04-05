@@ -1,0 +1,435 @@
+{% extends "base.html" %}
+
+{% block title %}管理者ダッシュボード - OpenLockey{% endblock %}
+
+{% block header %}管理者ダッシュボード{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- システム概要カード -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="card-title mb-0"><i class="bi bi-speedometer2 me-2"></i>システム概要</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h3 class="card-title">{{ stats.total_users }}</h3>
+                                    <p class="card-text text-muted">総ユーザー数</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h3 class="card-title">{{ stats.active_sessions }}</h3>
+                                    <p class="card-text text-muted">アクティブセッション</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h3 class="card-title">{{ stats.locked_accounts }}</h3>
+                                    <p class="card-text text-muted">ロック中アカウント</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h3 class="card-title">{{ stats.pending_reset_requests }}</h3>
+                                    <p class="card-text text-muted">保留中リセット依頼</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="d-flex justify-content-between">
+                        <a 
+                            href="/admin/users" 
+                            class="btn btn-sm btn-outline-primary"
+                        >
+                            <i class="bi bi-people me-1"></i>ユーザー管理
+                        </a>
+                        <a 
+                            href="/admin/reset-requests" 
+                            class="btn btn-sm btn-outline-primary"
+                        >
+                            <i class="bi bi-envelope me-1"></i>リセット依頼
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 最近のアクティビティカード -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="card-title mb-0"><i class="bi bi-activity me-2"></i>最近のアクティビティ</h5>
+                </div>
+                <div class="card-body">
+                    <div class="timeline">
+                        {% for activity in recent_activities %}
+                        <div class="timeline-item">
+                            <div class="timeline-marker bg-{{ activity.type_color }}">
+                                <i class="bi bi-{{ activity.icon }}"></i>
+                            </div>
+                            <div class="timeline-content">
+                                <div class="d-flex justify-content-between">
+                                    <p class="mb-0">{{ activity.message }}</p>
+                                    <small class="text-muted">{{ activity.timestamp.strftime('%m/%d %H:%M') }}</small>
+                                </div>
+                                {% if activity.details %}
+                                <p class="text-muted small">{{ activity.details }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <a 
+                        href="/admin/logs" 
+                        class="btn btn-sm btn-outline-secondary w-100"
+                    >
+                        <i class="bi bi-journal-text me-1"></i>全てのログを表示
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- ログイン試行履歴カード -->
+        <div class="col-md-12 mb-4">
+            <div class="card">
+                <div 
+                    class="card-header d-flex justify-content-between align-items-center"
+                >
+                    <h5 class="card-title mb-0"><i class="bi bi-shield-exclamation me-2"></i>最近のログイン試行</h5>
+                    <a 
+                        href="/admin/logs" 
+                        class="btn btn-sm btn-outline-secondary"
+                    >
+                        詳細ログを表示
+                    </a>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>日時</th>
+                                    <th>ユーザー</th>
+                                    <th>IPアドレス</th>
+                                    <th>デバイス</th>
+                                    <th>ステータス</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for log in recent_login_attempts %}
+                                <tr>
+                                    <td>{{ log.timestamp.strftime('%Y/%m/%d %H:%M:%S') }}</td>
+                                    <td>
+                                        <a href="/admin/users/{{ log.user_id }}">{{ log.username }}</a>
+                                    </td>
+                                    <td>{{ log.ip_address }}</td>
+                                    <td>
+                                        <i class="bi bi-{{ 
+                                            'laptop' if 'Windows' in log.user_agent or 'Mac' in log.user_agent 
+                                            else 'phone' if 'Mobile' in log.user_agent or 'Android' in log.user_agent 
+                                            else 'display' 
+                                        }}"></i>
+                                        {{ 
+                                            log.user_agent.split(')')[0] + ')' 
+                                            if ')' in log.user_agent else log.user_agent 
+                                        }}
+                                    </td>
+                                    <td>
+                                        {% if log.success %}
+                                            <span class="badge bg-success">成功</span>
+                                        {% else %}
+                                            <span 
+                                                class="badge bg-danger" 
+                                                data-bs-toggle="tooltip" 
+                                                title="{{ log.failure_reason }}"
+                                            >失敗</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- クイックアクションカード -->
+        <div class="col-md-12 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0"><i class="bi bi-lightning-charge me-2"></i>クイックアクション</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <div class="d-grid">
+                                <a 
+                                    href="/admin/users/new" 
+                                    class="btn btn-outline-primary"
+                                >
+                                    <i class="bi bi-person-plus me-2"></i>新規ユーザー作成
+                                </a>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="d-grid">
+                                <button 
+                                    id="unlockAllBtn" 
+                                    class="btn btn-outline-success"
+                                >
+                                    <i class="bi bi-unlock me-2"></i>全アカウントのロック解除
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="d-grid">
+                                <button 
+                                    id="logoutAllBtn" 
+                                    class="btn btn-outline-warning"
+                                >
+                                    <i class="bi bi-box-arrow-right me-2"></i>全セッション終了
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="d-grid">
+                                <button 
+                                    id="backupNowBtn" 
+                                    class="btn btn-outline-info"
+                                >
+                                    <i class="bi bi-cloud-arrow-up me-2"></i>今すぐバックアップ
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // ツールチップの初期化
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+        
+        // 全アカウントのロック解除
+        const unlockAllBtn = document.getElementById('unlockAllBtn');
+        unlockAllBtn.addEventListener('click', async function() {
+            if (confirm('全てのアカウントのロックを解除してもよろしいですか？')) {
+                try {
+                    const response = await fetch('/api/admin/users/unlock-all', {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        // ロック解除成功
+                        const alertsDiv = document.getElementById('alerts');
+                        alertsDiv.innerHTML = `
+                            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                                全てのアカウントのロックが解除されました。
+                                <button 
+                                    type="button" 
+                                    class="btn-close" 
+                                    data-bs-dismiss="alert" 
+                                    aria-label="Close"
+                                ></button>
+                            </div>
+                        `;
+                        
+                        // ページをリロード
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1500);
+                    } else {
+                        const data = await response.json();
+                        throw new Error(data.detail || 'アカウントのロック解除に失敗しました。');
+                    }
+                } catch (error) {
+                    console.error('Unlock all accounts error:', error);
+                    const alertsDiv = document.getElementById('alerts');
+                    alertsDiv.innerHTML = `
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            ${error.message || 'アカウントのロック解除中にエラーが発生しました。'}
+                            <button 
+                                type="button" 
+                                class="btn-close" 
+                                data-bs-dismiss="alert" 
+                                aria-label="Close"
+                            ></button>
+                        </div>
+                    `;
+                }
+            }
+        });
+        
+        // 全セッション終了
+        const logoutAllBtn = document.getElementById('logoutAllBtn');
+        logoutAllBtn.addEventListener('click', async function() {
+            if (confirm('全てのユーザーの全セッションを終了してもよろしいですか？\n' + 
+                       'この操作を行うと、全てのユーザーが全てのデバイスからログアウトされます。')) {
+                try {
+                    const response = await fetch('/api/admin/sessions', {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        // 全セッション終了成功
+                        const alertsDiv = document.getElementById('alerts');
+                        alertsDiv.innerHTML = `
+                            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                                全てのセッションが正常に終了しました。
+                                <button 
+                                    type="button" 
+                                    class="btn-close" 
+                                    data-bs-dismiss="alert" 
+                                    aria-label="Close"
+                                ></button>
+                            </div>
+                        `;
+                        
+                        // ページをリロード
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1500);
+                    } else {
+                        const data = await response.json();
+                        throw new Error(data.detail || '全セッション終了に失敗しました。');
+                    }
+                } catch (error) {
+                    console.error('All sessions logout error:', error);
+                    const alertsDiv = document.getElementById('alerts');
+                    alertsDiv.innerHTML = `
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            ${error.message || '全セッション終了中にエラーが発生しました。'}
+                            <button 
+                                type="button" 
+                                class="btn-close" 
+                                data-bs-dismiss="alert" 
+                                aria-label="Close"
+                            ></button>
+                        </div>
+                    `;
+                }
+            }
+        });
+        
+        // 今すぐバックアップ
+        const backupNowBtn = document.getElementById('backupNowBtn');
+        backupNowBtn.addEventListener('click', async function() {
+            if (confirm('今すぐバックアップを実行してもよろしいですか？')) {
+                try {
+                    const response = await fetch('/api/admin/backup/now', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        // バックアップ成功
+                        const alertsDiv = document.getElementById('alerts');
+                        alertsDiv.innerHTML = `
+                            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                                バックアップが正常に実行されました。
+                                <button 
+                                    type="button" 
+                                    class="btn-close" 
+                                    data-bs-dismiss="alert" 
+                                    aria-label="Close"
+                                ></button>
+                            </div>
+                        `;
+                    } else {
+                        const data = await response.json();
+                        throw new Error(data.detail || 'バックアップの実行に失敗しました。');
+                    }
+                } catch (error) {
+                    console.error('Backup now error:', error);
+                    const alertsDiv = document.getElementById('alerts');
+                    alertsDiv.innerHTML = `
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            ${error.message || 'バックアップの実行中にエラーが発生しました。'}
+                            <button 
+                                type="button" 
+                                class="btn-close" 
+                                data-bs-dismiss="alert" 
+                                aria-label="Close"
+                            ></button>
+                        </div>
+                    `;
+                }
+            }
+        });
+    });
+</script>
+
+<style>
+    /* タイムラインのスタイル */
+    .timeline {
+        position: relative;
+        padding-left: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .timeline:before {
+        content: '';
+        position: absolute;
+        left: 0.5rem;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background-color: #e9ecef;
+    }
+    
+    .timeline-item {
+        position: relative;
+        padding-bottom: 1.5rem;
+    }
+    
+    .timeline-marker {
+        position: absolute;
+        left: -1.5rem;
+        width: 1rem;
+        height: 1rem;
+        border-radius: 50%;
+        text-align: center;
+        line-height: 1rem;
+        color: white;
+        font-size: 0.6rem;
+    }
+    
+    .timeline-content {
+        padding-left: 0.5rem;
+    }
+</style>
+{% endblock %}
+

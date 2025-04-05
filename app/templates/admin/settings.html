@@ -1,0 +1,535 @@
+{% extends "base.html" %}
+
+{% block title %}システム設定 - OpenLockey{% endblock %}
+
+{% block header %}システム設定{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- 認証設定 -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0"><i class="bi bi-shield-lock me-2"></i>認証設定</h5>
+                </div>
+                <div class="card-body">
+                    <form id="authSettingsForm">
+                        <div class="mb-3">
+                            <label for="sessionExpireHours" class="form-label">セッション有効期間（時間）</label>
+                            <input 
+                                type="number" 
+                                class="form-control" 
+                                id="sessionExpireHours" 
+                                name="session_expire_hours" 
+                                min="1" 
+                                max="720" 
+                                value="{{ settings.session_expire_hours }}"
+                            >
+                            <div class="form-text">ユーザーセッションの有効期限（1?720時間）</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="maxLoginAttempts" class="form-label">最大ログイン試行回数</label>
+                            <input 
+                                type="number" 
+                                class="form-control" 
+                                id="maxLoginAttempts" 
+                                name="max_login_attempts" 
+                                min="1" 
+                                max="10" 
+                                value="{{ settings.max_login_attempts }}"
+                            >
+                            <div class="form-text">この回数を超えるとアカウントが一時的にロックされます</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="lockoutDurationMinutes" class="form-label">アカウントロック期間（分）</label>
+                            <input 
+                                type="number" 
+                                class="form-control" 
+                                id="lockoutDurationMinutes" 
+                                name="lockout_duration_minutes" 
+                                min="5" 
+                                max="1440" 
+                                value="{{ settings.lockout_duration_minutes }}"
+                            >
+                            <div class="form-text">ログイン失敗によるロックの持続時間（5?1440分）</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="minPasswordLength" class="form-label">最小パスフレーズ長</label>
+                            <input 
+                                type="number" 
+                                class="form-control" 
+                                id="minPasswordLength" 
+                                name="min_password_length" 
+                                min="8" 
+                                max="64" 
+                                value="{{ settings.min_password_length }}"
+                            >
+                            <div class="form-text">パスフレーズの最小文字数（8?64文字）</div>
+                        </div>
+                        
+                        <div class="mb-3 form-check">
+                            <input 
+                                type="checkbox" 
+                                class="form-check-input" 
+                                id="requireSpecialChars" 
+                                name="require_special_chars" 
+                                {% if settings.require_special_chars %}checked{% endif %}
+                            >
+                            <label class="form-check-label" for="requireSpecialChars">特殊文字を必須にする</label>
+                        </div>
+                        
+                        <div class="mb-3 form-check">
+                            <input 
+                                type="checkbox" 
+                                class="form-check-input" 
+                                id="requireNumbers" 
+                                name="require_numbers" 
+                                {% if settings.require_numbers %}checked{% endif %}
+                            >
+                            <label class="form-check-label" for="requireNumbers">数字を必須にする</label>
+                        </div>
+                        
+                        <div class="mb-3 form-check">
+                            <input 
+                                type="checkbox" 
+                                class="form-check-input" 
+                                id="requireMixedCase" 
+                                name="require_mixed_case" 
+                                {% if settings.require_mixed_case %}checked{% endif %}
+                            >
+                            <label class="form-check-label" for="requireMixedCase">大文字小文字混在を必須にする</label>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">保存</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- システム設定 -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0"><i class="bi bi-gear me-2"></i>システム設定</h5>
+                </div>
+                <div class="card-body">
+                    <form id="systemSettingsForm">
+                        <div class="mb-3">
+                            <label for="appName" class="form-label">アプリケーション名</label>
+                            <input 
+                                type="text" 
+                                class="form-control" 
+                                id="appName" 
+                                name="app_name" 
+                                value="{{ settings.app_name }}"
+                            >
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="listenIp" class="form-label">リッスンIPアドレス</label>
+                            <input 
+                                type="text" 
+                                class="form-control" 
+                                id="listenIp" 
+                                name="listen_ip" 
+                                value="{{ settings.listen_ip }}"
+                            >
+                            <div class="form-text">アプリケーションがリッスンするIPアドレス（例: 0.0.0.0）</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="listenPort" class="form-label">リッスンポート</label>
+                            <input 
+                                type="number" 
+                                class="form-control" 
+                                id="listenPort" 
+                                name="listen_port" 
+                                min="1" 
+                                max="65535" 
+                                value="{{ settings.listen_port }}"
+                            >
+                            <div class="form-text">アプリケーションがリッスンするポート番号（1?65535）</div>
+                        </div>
+                        
+                        <div class="mb-3 form-check">
+                            <input 
+                                type="checkbox" 
+                                class="form-check-input" 
+                                id="debugMode" 
+                                name="debug" 
+                                {% if settings.debug %}checked{% endif %}
+                            >
+                            <label class="form-check-label" for="debugMode">デバッグモード</label>
+                            <div class="form-text">開発環境でのみ有効にしてください。本番環境では無効にすることを推奨します。</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="logLevel" class="form-label">ログレベル</label>
+                            <select class="form-select" id="logLevel" name="log_level">
+                                <option value="DEBUG" {% if settings.log_level == 'DEBUG' %}selected{% endif %}>DEBUG</option>
+                                <option value="INFO" {% if settings.log_level == 'INFO' %}selected{% endif %}>INFO</option>
+                                <option value="WARNING" {% if settings.log_level == 'WARNING' %}selected{% endif %}>WARNING</option>
+                                <option value="ERROR" {% if settings.log_level == 'ERROR' %}selected{% endif %}>ERROR</option>
+                                <option value="CRITICAL" {% if settings.log_level == 'CRITICAL' %}selected{% endif %}>CRITICAL</option>
+                            </select>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">保存</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- バックアップ設定 -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0"><i class="bi bi-cloud-arrow-up me-2"></i>バックアップ設定</h5>
+                </div>
+                <div class="card-body">
+                    <form id="backupSettingsForm">
+                        <div class="mb-3 form-check">
+                            <input 
+                                type="checkbox" 
+                                class="form-check-input" 
+                                id="enableAutoBackup" 
+                                name="enable_auto_backup" 
+                                {% if settings.enable_auto_backup %}checked{% endif %}
+                            >
+                            <label class="form-check-label" for="enableAutoBackup">自動バックアップを有効にする</label>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="backupInterval" class="form-label">バックアップ間隔（時間）</label>
+                            <input 
+                                type="number" 
+                                class="form-control" 
+                                id="backupInterval" 
+                                name="backup_interval_hours" 
+                                min="1" 
+                                max="168" 
+                                value="{{ settings.backup_interval_hours }}"
+                            >
+                            <div class="form-text">自動バックアップの実行間隔（1?168時間）</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="backupRetention" class="form-label">バックアップ保持期間（日）</label>
+                            <input 
+                                type="number" 
+                                class="form-control" 
+                                id="backupRetention" 
+                                name="backup_retention_days" 
+                                min="1" 
+                                max="365" 
+                                value="{{ settings.backup_retention_days }}"
+                            >
+                            <div class="form-text">バックアップファイルを保持する期間（1?365日）</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="backupPath" class="form-label">バックアップパス</label>
+                            <input 
+                                type="text" 
+                                class="form-control" 
+                                id="backupPath" 
+                                name="backup_path" 
+                                value="{{ settings.backup_path }}"
+                            >
+                            <div class="form-text">バックアップファイルを保存するディレクトリパス</div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">保存</button>
+                        <button type="button" class="btn btn-outline-primary" id="backupNowBtn">今すぐバックアップ</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- メール設定 -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0"><i class="bi bi-envelope me-2"></i>メール設定</h5>
+                </div>
+                <div class="card-body">
+                    <form id="mailSettingsForm">
+                        <div class="mb-3 form-check">
+                            <input 
+                                type="checkbox" 
+                                class="form-check-input" 
+                                id="enableEmail" 
+                                name="enable_email" 
+                                {% if settings.enable_email %}checked{% endif %}
+                            >
+                            <label class="form-check-label" for="enableEmail">メール通知を有効にする</label>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="smtpServer" class="form-label">SMTPサーバー</label>
+                            <input 
+                                type="text" 
+                                class="form-control" 
+                                id="smtpServer" 
+                                name="smtp_server" 
+                                value="{{ settings.smtp_server }}"
+                            >
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="smtpPort" class="form-label">SMTPポート</label>
+                            <input 
+                                type="number" 
+                                class="form-control" 
+                                id="smtpPort" 
+                                name="smtp_port" 
+                                min="1" 
+                                max="65535" 
+                                value="{{ settings.smtp_port }}"
+                            >
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="smtpUsername" class="form-label">SMTPユーザー名</label>
+                            <input 
+                                type="text" 
+                                class="form-control" 
+                                id="smtpUsername" 
+                                name="smtp_username" 
+                                value="{{ settings.smtp_username }}"
+                            >
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="smtpPassword" class="form-label">SMTPパスワード</label>
+                            <input 
+                                type="password" 
+                                class="form-control" 
+                                id="smtpPassword" 
+                                name="smtp_password" 
+                                value="{{ settings.smtp_password }}"
+                            >
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="emailSender" class="form-label">送信者メールアドレス</label>
+                            <input 
+                                type="email" 
+                                class="form-control" 
+                                id="emailSender" 
+                                name="email_sender" 
+                                value="{{ settings.email_sender }}"
+                            >
+                        </div>
+                        
+                        <div class="mb-3 form-check">
+                            <input 
+                                type="checkbox" 
+                                class="form-check-input" 
+                                id="smtpUseTls" 
+                                name="smtp_use_tls" 
+                                {% if settings.smtp_use_tls %}checked{% endif %}
+                            >
+                            <label class="form-check-label" for="smtpUseTls">TLSを使用する</label>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">保存</button>
+                        <button type="button" class="btn btn-outline-primary" id="testEmailBtn">テストメール送信</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- テストメールモーダル -->
+<div class="modal fade" id="testEmailModal" tabindex="-1" aria-labelledby="testEmailModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="testEmailModalLabel">テストメール送信</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="testEmailForm">
+                    <div class="mb-3">
+                        <label for="testEmailAddress" class="form-label">送信先メールアドレス</label>
+                        <input 
+                            type="email" 
+                            class="form-control" 
+                            id="testEmailAddress" 
+                            required
+                        >
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                <button type="button" class="btn btn-primary" id="sendTestEmailBtn">送信</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 認証設定フォームの送信
+        document.getElementById('authSettingsForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            await saveSettings('auth', this);
+        });
+        
+        // システム設定フォームの送信
+        document.getElementById('systemSettingsForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            await saveSettings('system', this);
+        });
+        
+        // バックアップ設定フォームの送信
+        document.getElementById('backupSettingsForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            await saveSettings('backup', this);
+        });
+        
+        // メール設定フォームの送信
+        document.getElementById('mailSettingsForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            await saveSettings('mail', this);
+        });
+        
+        // 設定の保存
+        async function saveSettings(settingType, form) {
+            try {
+                const formData = new FormData(form);
+                const settings = {};
+                
+                // FormDataからオブジェクトに変換
+                for (const [key, value] of formData.entries()) {
+                    // チェックボックスの処理
+                    if (form.elements[key].type === 'checkbox') {
+                        settings[key] = form.elements[key].checked;
+                    } 
+                    // 数値の処理
+                    else if (form.elements[key].type === 'number') {
+                        settings[key] = parseInt(value, 10);
+                    } 
+                    // その他の値
+                    else {
+                        settings[key] = value;
+                    }
+                }
+                
+                // APIリクエスト
+                const response = await fetch(`/api/admin/settings/${settingType}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(settings)
+                });
+                
+                if (!response.ok) {
+                    const data = await response.json();
+                    throw new Error(data.detail || '設定の保存に失敗しました。');
+                }
+                
+                // 成功メッセージの表示
+                showAlert('success', '設定が正常に保存されました。');
+                
+            } catch (error) {
+                console.error(`Error saving ${settingType} settings:`, error);
+                showAlert('danger', error.message || '設定の保存中にエラーが発生しました。');
+            }
+        }
+        
+        // 今すぐバックアップボタン
+        document.getElementById('backupNowBtn').addEventListener('click', async function() {
+            try {
+                const response = await fetch('/api/admin/backup/now', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                if (!response.ok) {
+                    const data = await response.json();
+                    throw new Error(data.detail || 'バックアップの実行に失敗しました。');
+                }
+                
+                // 成功メッセージの表示
+                showAlert('success', 'バックアップが正常に実行されました。');
+                
+            } catch (error) {
+                console.error('Error executing backup:', error);
+                showAlert('danger', error.message || 'バックアップの実行中にエラーが発生しました。');
+            }
+        });
+        
+        // テストメールボタン
+        document.getElementById('testEmailBtn').addEventListener('click', function() {
+            const testEmailModal = new bootstrap.Modal(document.getElementById('testEmailModal'));
+            testEmailModal.show();
+        });
+        
+        // テストメール送信
+        document.getElementById('sendTestEmailBtn').addEventListener('click', async function() {
+            const emailAddress = document.getElementById('testEmailAddress').value;
+            
+            if (!emailAddress) {
+                alert('メールアドレスを入力してください。');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/admin/mail/test', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email: emailAddress })
+                });
+                
+                if (!response.ok) {
+                    const data = await response.json();
+                    throw new Error(data.detail || 'テストメールの送信に失敗しました。');
+                }
+                
+                // モーダルを閉じる
+                const testEmailModal = bootstrap.Modal.getInstance(document.getElementById('testEmailModal'));
+                testEmailModal.hide();
+                
+                // 成功メッセージの表示
+                showAlert('success', 'テストメールが正常に送信されました。');
+                
+            } catch (error) {
+                console.error('Error sending test email:', error);
+                showAlert('danger', error.message || 'テストメールの送信中にエラーが発生しました。');
+            }
+        });
+        
+        // アラートの表示
+        function showAlert(type, message) {
+            const alertsDiv = document.getElementById('alerts');
+            alertsDiv.innerHTML = `
+                <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                    ${message}
+                    <button 
+                        type="button" 
+                        class="btn-close" 
+                        data-bs-dismiss="alert" 
+                        aria-label="Close"
+                    ></button>
+                </div>
+            `;
+        }
+    });
+</script>
+{% endblock %}
+

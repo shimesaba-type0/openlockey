@@ -1,0 +1,664 @@
+{% extends "base.html" %}
+
+{% block title %}ユーザー管理 - OpenLockey{% endblock %}
+
+{% block header %}ユーザー管理{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div 
+                    class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0"><i class="bi bi-people me-2"></i>ユーザー一覧</h5>
+                    <div>
+                        <a 
+                            href="/admin/users/new" 
+                            class="btn btn-sm btn-primary">
+                            <i class="bi bi-person-plus me-1"></i>新規ユーザー作成
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- 検索・フィルターフォーム -->
+                    <div class="row mb-4">
+                        <div class="col-md-8">
+                            <form id="searchForm" class="d-flex">
+                                <div class="input-group">
+                                    <input 
+                                        type="text" 
+                                        class="form-control" 
+                                        id="searchInput" 
+                                        name="search" 
+                                        placeholder="ユーザー名で検索..." 
+                                        value="{{ search_query }}">
+                                    <button class="btn btn-outline-secondary" type="submit">
+                                        <i class="bi bi-search"></i>
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="d-flex justify-content-end">
+                                <select 
+                                    class="form-select form-select-sm me-2" 
+                                    id="statusFilter" 
+                                    style="width: auto;">
+                                    <option 
+                                        value="all" 
+                                        {% if status_filter == 'all' %}selected{% endif %}>
+                                        全てのステータス
+                                    </option>
+                                    <option 
+                                        value="active" 
+                                        {% if status_filter == 'active' %}selected{% endif %}>
+                                        アクティブのみ
+                                    </option>
+                                    <option 
+                                        value="inactive" 
+                                        {% if status_filter == 'inactive' %}selected{% endif %}>
+                                        無効のみ
+                                    </option>
+                                    <option 
+                                        value="locked" 
+                                        {% if status_filter == 'locked' %}selected{% endif %}>
+                                        ロック中のみ
+                                    </option>
+                                    <option 
+                                        value="admin" 
+                                        {% if status_filter == 'admin' %}selected{% endif %}>
+                                        管理者のみ
+                                    </option>
+                                </select>
+                                <button class="btn btn-sm btn-outline-secondary" id="refreshBtn">
+                                    <i class="bi bi-arrow-clockwise"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- ユーザーテーブル -->
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="usersTable">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>ユーザー名</th>
+                                    <th>作成日</th>
+                                    <th>最終ログイン</th>
+                                    <th>ステータス</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for user in users %}
+                                <tr>
+                                    <td>{{ user.id }}</td>
+                                    <td>
+                                        <a href="/admin/users/{{ user.id }}">{{ user.username }}</a>
+                                        {% if user.is_admin %}
+                                            <span class="badge bg-primary ms-1">管理者</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ user.created_at.strftime('%Y/%m/%d') }}</td>
+                                    <td>
+                                        {{ user.last_login.strftime('%Y/%m/%d %H:%M') if user.last_login else '未ログイン' }}
+                                    </td>
+                                    <td>
+                                        {% if not user.is_active %}
+                                            <span class="badge bg-danger">無効</span>
+                                        {% elif user.permanent_lock %}
+                                            <span class="badge bg-danger">永久ロック</span>
+                                        {% elif user.locked_until and user.locked_until > now %}
+                                            <span class="badge bg-warning">
+                                                ロック中 ({{ user.locked_until.strftime('%m/%d %H:%M') }}まで)
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-success">アクティブ</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a 
+                                                href="/admin/users/{{ user.id }}" 
+                                                class="btn btn-outline-primary">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                            {% if user.locked_until and user.locked_until > now or user.permanent_lock %}
+                                                <button 
+                                                    class="btn btn-outline-success unlock-btn" 
+                                                    data-user-id="{{ user.id }}" 
+                                                    data-bs-toggle="tooltip" 
+                                                    title="ロック解除">
+                                                    <i class="bi bi-unlock"></i>
+                                                </button>
+                                            {% else %}
+                                                <button 
+                                                    class="btn btn-outline-warning lock-btn" 
+                                                    data-user-id="{{ user.id }}" 
+                                                    data-bs-toggle="tooltip" 
+                                                    title="ロック">
+                                                    <i class="bi bi-lock"></i>
+                                                </button>
+                                            {% endif %}
+                                            <button 
+                                                class="btn btn-outline-info reset-password-btn" 
+                                                data-user-id="{{ user.id }}" 
+                                                data-username="{{ user.username }}" 
+                                                data-bs-toggle="tooltip" 
+                                                title="パスフレーズリセット">
+                                                <i class="bi bi-key"></i>
+                                            </button>
+                                            <button 
+                                                class="btn btn-outline-danger delete-btn" 
+                                                data-user-id="{{ user.id }}" 
+                                                data-username="{{ user.username }}" 
+                                                data-bs-toggle="tooltip" 
+                                                title="削除">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- ページネーション -->
+                    {% if pagination %}
+                    <nav aria-label="ページナビゲーション">
+                        <ul class="pagination justify-content-center">
+                            <li 
+                                class="page-item {{ 'disabled' if pagination.current_page == 1 else '' }}">
+                                <a 
+                                    class="page-link" 
+                                    href="?page={{ pagination.current_page - 1 }}&search={{ search_query }}&status={{ status_filter }}" 
+                                    aria-label="前へ">
+                                    <span aria-hidden="true">&laquo;</span>
+                                </a>
+                            </li>
+                            
+                            {% for page in pagination.pages %}
+                                {% if page == pagination.current_page %}
+                                    <li class="page-item active">
+                                        <span class="page-link">{{ page }}</span>
+                                    </li>
+                                {% else %}
+                                    <li class="page-item">
+                                        <a 
+                                            class="page-link" 
+                                            href="?page={{ page }}&search={{ search_query }}&status={{ status_filter }}">
+                                            {{ page }}
+                                        </a>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+                            
+                            <li 
+                                class="page-item {{ 'disabled' if pagination.current_page == pagination.total_pages else '' }}">
+                                <a 
+                                    class="page-link" 
+                                    href="?page={{ pagination.current_page + 1 }}&search={{ search_query }}&status={{ status_filter }}" 
+                                    aria-label="次へ">
+                                    <span aria-hidden="true">&raquo;</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- パスフレーズリセットモーダル -->
+<div 
+    class="modal fade" 
+    id="resetPasswordModal" 
+    tabindex="-1" 
+    aria-labelledby="resetPasswordModalLabel" 
+    aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="resetPasswordModalLabel">パスフレーズリセット</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="閉じる"></button>
+            </div>
+            <div class="modal-body">
+                <p><span id="resetUsername"></span> のパスフレーズをリセットします。</p>
+                <form id="resetPasswordForm">
+                    <input type="hidden" id="resetUserId" name="user_id">
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input 
+                                class="form-check-input" 
+                                type="radio" 
+                                name="resetOption" 
+                                id="generateOption" 
+                                value="generate" 
+                                checked>
+                            <label class="form-check-label" for="generateOption">
+                                自動生成パスフレーズを使用
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input 
+                                class="form-check-input" 
+                                type="radio" 
+                                name="resetOption" 
+                                id="customOption" 
+                                value="custom">
+                            <label class="form-check-label" for="customOption">
+                                カスタムパスフレーズを指定
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div id="generateOptions" class="mb-3">
+                        <label class="form-label">パスフレーズ長:</label>
+                        <div class="form-check form-check-inline">
+                            <input 
+                                class="form-check-input" 
+                                type="radio" 
+                                name="passwordLength" 
+                                id="length64" 
+                                value="64" 
+                                checked>
+                            <label class="form-check-label" for="length64">64文字</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input 
+                                class="form-check-input" 
+                                type="radio" 
+                                name="passwordLength" 
+                                id="length32" 
+                                value="32">
+                            <label class="form-check-label" for="length32">32文字</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input 
+                                class="form-check-input" 
+                                type="radio" 
+                                name="passwordLength" 
+                                id="length128" 
+                                value="128">
+                            <label class="form-check-label" for="length128">128文字</label>
+                        </div>
+                    </div>
+                    
+                    <div id="customPasswordField" class="mb-3 d-none">
+                        <label for="customPassword" class="form-label">新しいパスフレーズ:</label>
+                        <div class="input-group">
+                            <input 
+                                type="password" 
+                                class="form-control" 
+                                id="customPassword" 
+                                name="customPassword" 
+                                minlength="32" 
+                                maxlength="128">
+                            <button 
+                                class="btn btn-outline-secondary toggle-password" 
+                                type="button" 
+                                data-target="customPassword">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
+                        <div class="form-text">32文字以上のパスフレーズを入力してください。</div>
+                    </div>
+                </form>
+                
+                <div id="generatedPasswordContainer" class="alert alert-info d-none">
+                    <p class="mb-1">生成されたパスフレーズ:</p>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="generatedPassword" readonly>
+                        <button 
+                            class="btn btn-outline-secondary" 
+                            id="copyPasswordBtn" 
+                            type="button">
+                            <i class="bi bi-clipboard"></i>
+                        </button>
+                    </div>
+                    <small class="text-muted">
+                        このパスフレーズは一度だけ表示されます。必要に応じてコピーしてください。
+                    </small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                <button type="button" class="btn btn-primary" id="resetPasswordBtn">リセット</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // ツールチップの初期化
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+        
+        // ステータスフィルター
+        const statusFilter = document.getElementById('statusFilter');
+        statusFilter.addEventListener('change', function() {
+            const currentUrl = new URL(window.location);
+            currentUrl.searchParams.set('status', this.value);
+            currentUrl.searchParams.set('page', '1'); // フィルター変更時は1ページ目に戻る
+            window.location.href = currentUrl.toString();
+        });
+        
+        // 更新ボタン
+        const refreshBtn = document.getElementById('refreshBtn');
+        refreshBtn.addEventListener('click', function() {
+            window.location.reload();
+        });
+        
+        // ロックボタン
+        const lockBtns = document.querySelectorAll('.lock-btn');
+        lockBtns.forEach(btn => {
+            btn.addEventListener('click', async function() {
+                const userId = this.getAttribute('data-user-id');
+                
+                if (confirm('このユーザーをロックしてもよろしいですか？')) {
+                    try {
+                        const response = await fetch(`/api/admin/users/${userId}/lock`, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            }
+                        });
+                        
+                        if (response.ok) {
+                            // ロック成功
+                            const alertsDiv = document.getElementById('alerts');
+                            alertsDiv.innerHTML = `
+                                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                                    ユーザーが正常にロックされました。
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </div>
+                            `;
+                            
+                            // ページをリロード
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 1500);
+                        } else {
+                            const data = await response.json();
+                            throw new Error(data.detail || 'ユーザーのロックに失敗しました。');
+                        }
+                    } catch (error) {
+                        console.error('Lock user error:', error);
+                        const alertsDiv = document.getElementById('alerts');
+                        alertsDiv.innerHTML = `
+                            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                ${error.message || 'ユーザーのロック中にエラーが発生しました。'}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        `;
+                    }
+                }
+            });
+        });
+        
+        // ロック解除ボタン
+        const unlockBtns = document.querySelectorAll('.unlock-btn');
+        unlockBtns.forEach(btn => {
+            btn.addEventListener('click', async function() {
+                const userId = this.getAttribute('data-user-id');
+                
+                if (confirm('このユーザーのロックを解除してもよろしいですか？')) {
+                    try {
+                        const response = await fetch(`/api/admin/users/${userId}/unlock`, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            }
+                        });
+                        
+                        if (response.ok) {
+                            // ロック解除成功
+                            const alertsDiv = document.getElementById('alerts');
+                            alertsDiv.innerHTML = `
+                                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                                    ユーザーのロックが正常に解除されました。
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </div>
+                            `;
+                            
+                            // ページをリロード
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 1500);
+                        } else {
+                            const data = await response.json();
+                            throw new Error(data.detail || 'ユーザーのロック解除に失敗しました。');
+                        }
+                    } catch (error) {
+                        console.error('Unlock user error:', error);
+                        const alertsDiv = document.getElementById('alerts');
+                        alertsDiv.innerHTML = `
+                            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                ${error.message || 'ユーザーのロック解除中にエラーが発生しました。'}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        `;
+                    }
+                }
+            });
+        });
+        
+        // 削除ボタン
+        const deleteBtns = document.querySelectorAll('.delete-btn');
+        deleteBtns.forEach(btn => {
+            btn.addEventListener('click', async function() {
+                const userId = this.getAttribute('data-user-id');
+                const username = this.getAttribute('data-username');
+                
+                if (confirm(`ユーザー "${username}" を削除してもよろしいですか？\nこの操作は元に戻せません。`)) {
+                    try {
+                        const response = await fetch(`/api/admin/users/${userId}`, {
+                            method: 'DELETE',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            }
+                        });
+                        
+                        if (response.ok) {
+                            // 削除成功
+                            const alertsDiv = document.getElementById('alerts');
+                            alertsDiv.innerHTML = `
+                                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                                    ユーザーが正常に削除されました。
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </div>
+                            `;
+                            
+                            // ページをリロード
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 1500);
+                        } else {
+                            const data = await response.json();
+                            throw new Error(data.detail || 'ユーザーの削除に失敗しました。');
+                        }
+                    } catch (error) {
+                        console.error('Delete user error:', error);
+                        const alertsDiv = document.getElementById('alerts');
+                        alertsDiv.innerHTML = `
+                            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                ${error.message || 'ユーザーの削除中にエラーが発生しました。'}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        `;
+                    }
+                }
+            });
+        });
+        
+        // パスフレーズリセットモーダル
+        const resetPasswordModal = new bootstrap.Modal(document.getElementById('resetPasswordModal'));
+        const resetPasswordBtns = document.querySelectorAll('.reset-password-btn');
+        
+        resetPasswordBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const userId = this.getAttribute('data-user-id');
+                const username = this.getAttribute('data-username');
+                
+                document.getElementById('resetUserId').value = userId;
+                document.getElementById('resetUsername').textContent = username;
+                
+                // モーダルを表示
+                resetPasswordModal.show();
+            });
+        });
+        
+        // リセットオプション切り替え
+        const resetOptions = document.querySelectorAll('input[name="resetOption"]');
+        resetOptions.forEach(option => {
+            option.addEventListener('change', function() {
+                if (this.value === 'generate') {
+                    document.getElementById('generateOptions').classList.remove('d-none');
+                    document.getElementById('customPasswordField').classList.add('d-none');
+                } else {
+                    document.getElementById('generateOptions').classList.add('d-none');
+                    document.getElementById('customPasswordField').classList.remove('d-none');
+                }
+            });
+        });
+        
+        // パスワード表示切替
+        const togglePasswordBtns = document.querySelectorAll('.toggle-password');
+        togglePasswordBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const targetId = this.getAttribute('data-target');
+                const passwordInput = document.getElementById(targetId);
+                
+                const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                passwordInput.setAttribute('type', type);
+                this.querySelector('i').classList.toggle('bi-eye');
+                this.querySelector('i').classList.toggle('bi-eye-slash');
+            });
+        });
+        
+        // パスフレーズリセットボタン
+        const resetPasswordBtn = document.getElementById('resetPasswordBtn');
+        resetPasswordBtn.addEventListener('click', async function() {
+            const userId = document.getElementById('resetUserId').value;
+            const resetOption = document.querySelector('input[name="resetOption"]:checked').value;
+            
+            let requestBody = {
+                user_id: parseInt(userId)
+            };
+            
+            if (resetOption === 'generate') {
+                const passwordLength = document.querySelector('input[name="passwordLength"]:checked').value;
+                requestBody.generate_password = true;
+                requestBody.password_length = parseInt(passwordLength);
+            } else {
+                const customPassword = document.getElementById('customPassword').value;
+                
+                // パスワードの長さチェック
+                if (customPassword.length < 32) {
+                    alert('パスフレーズは32文字以上である必要があります。');
+                    return;
+                }
+                
+                requestBody.generate_password = false;
+                requestBody.new_password = customPassword;
+            }
+            
+            try {
+                const response = await fetch(`/api/admin/users/${userId}/reset-password`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // リセット成功
+                    if (data.password) {
+                        // 生成されたパスワードを表示
+                        document.getElementById('generatedPassword').value = data.password;
+                        document.getElementById('generatedPasswordContainer').classList.remove('d-none');
+                        
+                        // リセットボタンを非表示
+                        resetPasswordBtn.classList.add('d-none');
+                    } else {
+                        // カスタムパスワードの場合
+                        resetPasswordModal.hide();
+                        
+                        const alertsDiv = document.getElementById('alerts');
+                        alertsDiv.innerHTML = `
+                            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                                パスフレーズが正常にリセットされました。
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        `;
+                    }
+                } else {
+                    throw new Error(data.detail || 'パスフレーズリセットに失敗しました。');
+                }
+            } catch (error) {
+                console.error('Reset password error:', error);
+                resetPasswordModal.hide();
+                
+                const alertsDiv = document.getElementById('alerts');
+                alertsDiv.innerHTML = `
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        ${error.message || 'パスフレーズリセット中にエラーが発生しました。'}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                `;
+            }
+        });
+        
+        // パスワードコピーボタン
+        const copyPasswordBtn = document.getElementById('copyPasswordBtn');
+        copyPasswordBtn.addEventListener('click', function() {
+            const generatedPassword = document.getElementById('generatedPassword');
+            generatedPassword.select();
+            document.execCommand('copy');
+            
+            // コピー成功表示
+            this.innerHTML = '<i class="bi bi-check"></i>';
+            setTimeout(() => {
+                this.innerHTML = '<i class="bi bi-clipboard"></i>';
+            }, 2000);
+        });
+        
+        // モーダルが閉じられたときの処理
+        document.getElementById('resetPasswordModal').addEventListener('hidden.bs.modal', function() {
+            // フォームをリセット
+            document.getElementById('resetPasswordForm').reset();
+            document.getElementById('generateOptions').classList.remove('d-none');
+            document.getElementById('customPasswordField').classList.add('d-none');
+            document.getElementById('generatedPasswordContainer').classList.add('d-none');
+            resetPasswordBtn.classList.remove('d-none');
+        });
+    });
+</script>
+
+<style>
+    /* テーブルの行にホバーエフェクトを追加 */
+    #usersTable tbody tr {
+        cursor: pointer;
+    }
+    
+    /* ボタングループのスタイル調整 */
+    .btn-group .btn {
+        padding: 0.25rem 0.5rem;
+    }
+</style>
+{% endblock %}
+

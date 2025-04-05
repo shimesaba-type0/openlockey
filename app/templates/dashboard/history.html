@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+
+{% block title %}ログイン履歴 - OpenLockey{% endblock %}
+
+{% block header %}ログイン履歴{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div 
+                    class="card-header d-flex justify-content-between align-items-center"
+                >
+                    <h5 class="card-title mb-0"><i class="bi bi-clock-history me-2"></i>ログイン履歴</h5>
+                    <div>
+                        <button 
+                            class="btn btn-sm btn-outline-secondary" 
+                            id="refreshBtn"
+                        >
+                            <i class="bi bi-arrow-clockwise me-1"></i>更新
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="loginHistoryTable">
+                            <thead>
+                                <tr>
+                                    <th>日時</th>
+                                    <th>IPアドレス</th>
+                                    <th>デバイス</th>
+                                    <th>ステータス</th>
+                                    <th>詳細</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for log in login_history %}
+                                <tr>
+                                    <td>{{ log.timestamp.strftime('%Y/%m/%d %H:%M:%S') }}</td>
+                                    <td>{{ log.ip_address }}</td>
+                                    <td>
+                                        <i class="bi bi-{{ 
+                                            'laptop' if 'Windows' in log.user_agent or 'Mac' in log.user_agent 
+                                            else 'phone' if 'Mobile' in log.user_agent or 'Android' in log.user_agent 
+                                            else 'display' 
+                                        }}"></i>
+                                        {{ 
+                                            log.user_agent.split(')')[0] + ')' 
+                                            if ')' in log.user_agent else log.user_agent 
+                                        }}
+                                    </td>
+                                    <td>
+                                        {% if log.success %}
+                                            <span class="badge bg-success">成功</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">失敗</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if not log.success and log.failure_reason %}
+                                            <button 
+                                                class="btn btn-sm btn-outline-info view-details-btn" 
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#detailsModal" 
+                                                data-details="{{ log.failure_reason }}"
+                                            >
+                                                <i class="bi bi-info-circle"></i>
+                                            </button>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- ページネーション -->
+                    {% if pagination %}
+                    <nav aria-label="ページナビゲーション">
+                        <ul class="pagination justify-content-center">
+                            <li class="page-item {{ 'disabled' if pagination.current_page == 1 else '' }}">
+                                <a 
+                                    class="page-link" 
+                                    href="?page={{ pagination.current_page - 1 }}" 
+                                    aria-label="前へ"
+                                >
+                                    <span aria-hidden="true">&laquo;</span>
+                                </a>
+                            </li>
+                            
+                            {% for page in pagination.pages %}
+                                {% if page == pagination.current_page %}
+                                    <li class="page-item active">
+                                        <span class="page-link">{{ page }}</span>
+                                    </li>
+                                {% else %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ page }}">{{ page }}</a>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+                            
+                            <li 
+                                class="page-item {{ 'disabled' if pagination.current_page == pagination.total_pages else '' }}"
+                            >
+                                <a 
+                                    class="page-link" 
+                                    href="?page={{ pagination.current_page + 1 }}" 
+                                    aria-label="次へ"
+                                >
+                                    <span aria-hidden="true">&raquo;</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 詳細モーダル -->
+<div 
+    class="modal fade" 
+    id="detailsModal" 
+    tabindex="-1" 
+    aria-labelledby="detailsModalLabel" 
+    aria-hidden="true"
+>
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="detailsModalLabel">ログイン失敗の詳細</h5>
+                <button 
+                    type="button" 
+                    class="btn-close" 
+                    data-bs-dismiss="modal" 
+                    aria-label="閉じる"
+                ></button>
+            </div>
+            <div class="modal-body">
+                <p id="detailsContent"></p>
+            </div>
+            <div class="modal-footer">
+                <button 
+                    type="button" 
+                    class="btn btn-secondary" 
+                    data-bs-dismiss="modal"
+                >閉じる</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 詳細ボタンのイベントハンドラ
+        const viewDetailsBtns = document.querySelectorAll('.view-details-btn');
+        viewDetailsBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const details = this.getAttribute('data-details');
+                document.getElementById('detailsContent').textContent = details;
+            });
+        });
+        
+        // 更新ボタンのイベントハンドラ
+        const refreshBtn = document.getElementById('refreshBtn');
+        refreshBtn.addEventListener('click', function() {
+            window.location.reload();
+        });
+        
+        // テーブルの行にホバーエフェクトを追加
+        const tableRows = document.querySelectorAll('#loginHistoryTable tbody tr');
+        tableRows.forEach(row => {
+            row.style.cursor = 'pointer';
+            row.addEventListener('click', function(e) {
+                // 詳細ボタンがクリックされた場合は、行のクリックイベントを発火させない
+                if (e.target.closest('.view-details-btn')) {
+                    return;
+                }
+                
+                // 行内に詳細ボタンがある場合は、そのボタンのクリックイベントを発火
+                const detailsBtn = this.querySelector('.view-details-btn');
+                if (detailsBtn) {
+                    detailsBtn.click();
+                }
+            });
+        });
+        
+        // フィルタリング機能（将来的な拡張用）
+        // const filterForm = document.getElementById('filterForm');
+        // if (filterForm) {
+        //     filterForm.addEventListener('submit', function(e) {
+        //         e.preventDefault();
+        //         // フィルタリングロジックをここに実装
+        //     });
+        // }
+    });
+</script>
+{% endblock %}
+

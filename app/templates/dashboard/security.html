@@ -1,0 +1,445 @@
+{% extends "base.html" %}
+
+{% block title %}セキュリティ設定 - OpenLockey{% endblock %}
+
+{% block header %}セキュリティ設定{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- パスフレーズ変更カード -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="card-title mb-0"><i class="bi bi-shield-lock me-2"></i>パスフレーズ変更</h5>
+                </div>
+                <div class="card-body">
+                    <form id="passwordChangeForm">
+                        <div class="mb-3">
+                            <label for="current_password" class="form-label">現在のパスフレーズ</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                                <input 
+                                    type="password" 
+                                    class="form-control" 
+                                    id="current_password" 
+                                    name="current_password" 
+                                    required
+                                >
+                                <button 
+                                    class="btn btn-outline-secondary toggle-password" 
+                                    type="button" 
+                                    data-target="current_password"
+                                >
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="new_password" class="form-label">新しいパスフレーズ</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                                <input 
+                                    type="password" 
+                                    class="form-control" 
+                                    id="new_password" 
+                                    name="new_password" 
+                                    required 
+                                    minlength="32" 
+                                    maxlength="128"
+                                >
+                                <button 
+                                    class="btn btn-outline-secondary toggle-password" 
+                                    type="button" 
+                                    data-target="new_password"
+                                >
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            </div>
+                            <div class="form-text">32文字以上のパスフレーズを入力してください。</div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="passwordStrength" class="form-label">パスフレーズ強度</label>
+                            <div class="progress">
+                                <div 
+                                    id="passwordStrength" 
+                                    class="progress-bar" 
+                                    role="progressbar" 
+                                    style="width: 0%;" 
+                                    aria-valuenow="0" 
+                                    aria-valuemin="0" 
+                                    aria-valuemax="100"
+                                ></div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <button 
+                                type="button" 
+                                id="generatePassword" 
+                                class="btn btn-outline-primary w-100"
+                            >
+                                <i class="bi bi-shield-lock"></i> 安全なパスフレーズを生成
+                            </button>
+                            <div class="mt-2">
+                                <div class="form-check form-check-inline">
+                                    <input 
+                                        class="form-check-input" 
+                                        type="radio" 
+                                        name="passwordLength" 
+                                        id="length64" 
+                                        value="64" 
+                                        checked
+                                    >
+                                    <label class="form-check-label" for="length64">64文字</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input 
+                                        class="form-check-input" 
+                                        type="radio" 
+                                        name="passwordLength" 
+                                        id="length32" 
+                                        value="32"
+                                    >
+                                    <label class="form-check-label" for="length32">32文字</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input 
+                                        class="form-check-input" 
+                                        type="radio" 
+                                        name="passwordLength" 
+                                        id="length128" 
+                                        value="128"
+                                    >
+                                    <label class="form-check-label" for="length128">128文字</label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">パスフレーズを変更</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- セキュリティステータスカード -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="card-title mb-0"><i class="bi bi-shield-check me-2"></i>セキュリティステータス</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <i class="bi bi-key me-2"></i>
+                                <span>パスフレーズ強度</span>
+                            </div>
+                            <span class="badge bg-success rounded-pill">強力</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <i class="bi bi-clock-history me-2"></i>
+                                <span>最終パスフレーズ変更</span>
+                            </div>
+                            <span>{{ user.updated_at.strftime('%Y年%m月%d日') }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <i class="bi bi-display me-2"></i>
+                                <span>アクティブセッション数</span>
+                            </div>
+                            <span class="badge bg-primary rounded-pill">{{ sessions|length }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <i class="bi bi-shield-exclamation me-2"></i>
+                                <span>ログイン失敗回数</span>
+                            </div>
+                            <span 
+                                class="badge bg-{{ 'warning' if user.failed_login_attempts > 0 else 'success' }} rounded-pill"
+                            >
+                                {{ user.failed_login_attempts }}
+                            </span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <i class="bi bi-lock me-2"></i>
+                                <span>アカウントロック状態</span>
+                            </div>
+                            {% if user.locked_until and user.locked_until > now %}
+                                <span class="badge bg-danger">
+                                    ロック中 ({{ user.locked_until.strftime('%Y/%m/%d %H:%M') }}まで)
+                                </span>
+                            {% elif user.permanent_lock %}
+                                <span class="badge bg-danger">永久ロック</span>
+                            {% else %}
+                                <span class="badge bg-success">アンロック</span>
+                            {% endif %}
+                        </li>
+                    </ul>
+                </div>
+                <div class="card-footer">
+                    <div class="d-grid gap-2">
+                        <button 
+                            id="logoutAllDevicesBtn" 
+                            class="btn btn-outline-danger"
+                        >
+                            <i class="bi bi-box-arrow-right me-1"></i>全てのデバイスからログアウト
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // パスワード表示切替
+        const togglePasswordBtns = document.querySelectorAll('.toggle-password');
+        togglePasswordBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const targetId = this.getAttribute('data-target');
+                const passwordInput = document.getElementById(targetId);
+                
+                const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                passwordInput.setAttribute('type', type);
+                this.querySelector('i').classList.toggle('bi-eye');
+                this.querySelector('i').classList.toggle('bi-eye-slash');
+            });
+        });
+        
+        // パスワード強度メーター
+        const passwordInput = document.getElementById('new_password');
+        const strengthBar = document.getElementById('passwordStrength');
+        
+        passwordInput.addEventListener('input', function() {
+            const value = passwordInput.value;
+            let strength = 0;
+            
+            // 長さによる強度
+            if (value.length >= 32) strength += 25;
+            if (value.length >= 64) strength += 15;
+            if (value.length >= 96) strength += 10;
+            
+            // 文字種による強度
+            if (/[a-z]/.test(value)) strength += 15;
+            if (/[A-Z]/.test(value)) strength += 15;
+            if (/[0-9]/.test(value)) strength += 20;
+            // 特殊文字は使用可能文字に含まれないため、評価から除外
+            
+            // 強度に応じた色の設定
+            let barClass = 'bg-danger';
+            if (strength >= 40) barClass = 'bg-warning';
+            if (strength >= 70) barClass = 'bg-info';
+            if (strength >= 90) barClass = 'bg-success';
+            
+            strengthBar.className = `progress-bar ${barClass}`;
+            strengthBar.style.width = `${strength}%`;
+            strengthBar.setAttribute('aria-valuenow', strength);
+        });
+        
+        // パスワード生成
+        const generateButton = document.getElementById('generatePassword');
+        
+        generateButton.addEventListener('click', async function() {
+            const length = document.querySelector('input[name="passwordLength"]:checked').value;
+            
+            try {
+                const response = await fetch('/api/user/password/generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ length: parseInt(length) })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.password) {
+                    passwordInput.value = data.password;
+                    passwordInput.dispatchEvent(new Event('input')); // 強度メーターを更新
+                    
+                    // パスワードを表示状態にする
+                    passwordInput.setAttribute('type', 'text');
+                    document.querySelector('[data-target="new_password"] i').classList.remove('bi-eye');
+                    document.querySelector('[data-target="new_password"] i').classList.add('bi-eye-slash');
+                } else {
+                    // フロントエンドでパスワードを生成（APIが利用できない場合のフォールバック）
+                    // 視覚的に混同しやすい文字（l, I, O, 0, 1）を除外
+                    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+                    let generatedPassword = '';
+                    
+                    for (let i = 0; i < length; i++) {
+                        generatedPassword += chars.charAt(Math.floor(Math.random() * chars.length));
+                    }
+                    
+                    passwordInput.value = generatedPassword;
+                    passwordInput.dispatchEvent(new Event('input')); // 強度メーターを更新
+                    
+                    // パスワードを表示状態にする
+                    passwordInput.setAttribute('type', 'text');
+                    document.querySelector('[data-target="new_password"] i').classList.remove('bi-eye');
+                    document.querySelector('[data-target="new_password"] i').classList.add('bi-eye-slash');
+                }
+            } catch (error) {
+                console.error('Password generation error:', error);
+                // フロントエンドでパスワードを生成（エラー時のフォールバック）
+                // 視覚的に混同しやすい文字（l, I, O, 0, 1）を除外
+                const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+                let generatedPassword = '';
+                
+                for (let i = 0; i < length; i++) {
+                    generatedPassword += chars.charAt(Math.floor(Math.random() * chars.length));
+                }
+                
+                passwordInput.value = generatedPassword;
+                passwordInput.dispatchEvent(new Event('input')); // 強度メーターを更新
+                
+                // パスワードを表示状態にする
+                passwordInput.setAttribute('type', 'text');
+                document.querySelector('[data-target="new_password"] i').classList.remove('bi-eye');
+                document.querySelector('[data-target="new_password"] i').classList.add('bi-eye-slash');
+            }
+        });
+        
+        // パスワード変更フォーム送信
+        const passwordChangeForm = document.getElementById('passwordChangeForm');
+        passwordChangeForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            // パスワードの長さチェック
+            const newPassword = document.getElementById('new_password').value;
+            if (newPassword.length < 32) {
+                const alertsDiv = document.getElementById('alerts');
+                alertsDiv.innerHTML = `
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        新しいパスフレーズは32文字以上である必要があります。
+                        <button 
+                            type="button" 
+                            class="btn-close" 
+                            data-bs-dismiss="alert" 
+                            aria-label="Close"
+                        ></button>
+                    </div>
+                `;
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/user/password', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        current_password: document.getElementById('current_password').value,
+                        new_password: newPassword
+                    })
+                });
+                
+                if (response.ok) {
+                    // パスワード変更成功
+                    const alertsDiv = document.getElementById('alerts');
+                    alertsDiv.innerHTML = `
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            パスフレーズが正常に変更されました。
+                            <button 
+                                type="button" 
+                                class="btn-close" 
+                                data-bs-dismiss="alert" 
+                                aria-label="Close"
+                            ></button>
+                        </div>
+                    `;
+                    
+                    // フォームをリセット
+                    passwordChangeForm.reset();
+                    strengthBar.className = 'progress-bar';
+                    strengthBar.style.width = '0%';
+                    strengthBar.setAttribute('aria-valuenow', 0);
+                } else {
+                    const data = await response.json();
+                    throw new Error(data.detail || 'パスフレーズ変更に失敗しました。');
+                }
+            } catch (error) {
+                console.error('Password change error:', error);
+                const alertsDiv = document.getElementById('alerts');
+                alertsDiv.innerHTML = `
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        ${error.message || 'パスフレーズ変更中にエラーが発生しました。'}
+                        <button 
+                            type="button" 
+                            class="btn-close" 
+                            data-bs-dismiss="alert" 
+                            aria-label="Close"
+                        ></button>
+                    </div>
+                `;
+            }
+        });
+        
+        // 全デバイスからログアウト
+        const logoutAllDevicesBtn = document.getElementById('logoutAllDevicesBtn');
+        logoutAllDevicesBtn.addEventListener('click', async function() {
+            if (confirm('全てのデバイスからログアウトしてもよろしいですか？\n' + 
+                       'この操作を行うと、現在のセッションを含む全てのセッションが終了します。')) {
+                try {
+                    const response = await fetch('/api/user/sessions', {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        // 全セッション終了成功
+                        const alertsDiv = document.getElementById('alerts');
+                        alertsDiv.innerHTML = `
+                            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                                全てのセッションが正常に終了しました。ログインページにリダイレクトします。
+                                <button 
+                                    type="button" 
+                                    class="btn-close" 
+                                    data-bs-dismiss="alert" 
+                                    aria-label="Close"
+                                ></button>
+                            </div>
+                        `;
+                        
+                        // ログインページにリダイレクト
+                        setTimeout(() => {
+                            window.location.href = '/';
+                        }, 2000);
+                    } else {
+                        const data = await response.json();
+                        throw new Error(data.detail || '全セッション終了に失敗しました。');
+                    }
+                } catch (error) {
+                    console.error('All sessions logout error:', error);
+                    const alertsDiv = document.getElementById('alerts');
+                    alertsDiv.innerHTML = `
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            ${error.message || '全セッション終了中にエラーが発生しました。'}
+                            <button 
+                                type="button" 
+                                class="btn-close" 
+                                data-bs-dismiss="alert" 
+                                aria-label="Close"
+                            ></button>
+                        </div>
+                    `;
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}
+
